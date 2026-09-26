@@ -50,6 +50,26 @@ export interface Voice {
   cancel(): void;
 }
 
+export interface Soundtrack {
+  arm(): Promise<void>;
+  mute(on: boolean): void;
+  idle(): void;
+  ledOn(k: number): void;
+  photoLanded(k: number): void;
+  combining(): void;
+  descent(): void;
+  reveal(): void;
+  hold(): void;
+  voiceActive(on: boolean): void;
+  heldSun(azimuth: number, elevation: number): void;
+}
+
+const SILENT_SOUND: Soundtrack = {
+  arm: async () => {}, mute: () => {}, idle: () => {}, ledOn: () => {},
+  photoLanded: () => {}, combining: () => {}, descent: () => {}, reveal: () => {},
+  hold: () => {}, voiceActive: () => {}, heldSun: () => {},
+};
+
 export const TIMING = {
   readDeadlineMs: 8000, // after "done": no OCR by then -> 1202 alarm
   holdAfterMs: 3000, // after reading, before "hold the sun"
@@ -88,13 +108,16 @@ export class Director {
   private readonly overlay: Overlay;
   private readonly reader: Reader;
   private readonly voice: Voice;
+  private readonly sound: Soundtrack;
 
-  constructor(stage: Stage, overlay: Overlay, reader: Reader, voice: Voice) {
+  constructor(stage: Stage, overlay: Overlay, reader: Reader, voice: Voice, sound: Soundtrack = SILENT_SOUND) {
     this.stage = stage;
     this.overlay = overlay;
     this.reader = reader;
     this.voice = voice;
+    this.sound = sound;
     stage.idle();
+    sound.idle();
     overlay.idle(false);
   }
 
@@ -107,12 +130,14 @@ export class Director {
       case "ledOn":
         this.phase = "capture";
         this.stage.ledOn(e.led);
+        this.sound.ledOn(e.led);
         this.overlay.capture(e.led, [...this.captured]);
         this.watchStuck();
         break;
       case "photoLanded":
         if (!this.captured.includes(e.led)) this.captured.push(e.led);
         this.stage.photoLanded(e.led, e.url);
+        this.sound.photoLanded(e.led);
         this.overlay.landed(e.led, [...this.captured]);
         this.watchStuck();
         break;
@@ -120,6 +145,7 @@ export class Director {
         this.phase = "combining";
         this.clearStuck();
         this.stage.combining();
+        this.sound.combining();
         this.overlay.combining();
         break;
       case "done":
@@ -137,7 +163,9 @@ export class Director {
 
   /** First key press: audio may play from now on. */
   arm(): void {
+    if (this.armed) return;
     this.armed = true;
+    void this.sound.arm().catch(console.warn);
     if (this.phase === "idle") this.overlay.idle(true);
   }
 
@@ -151,6 +179,8 @@ export class Director {
     this.captured = [];
     this.clearStuck();
     this.voice.cancel();
+    this.sound.idle();
+    this.sound.voiceActive(false);
     this.overlay.alarm(false);
     this.overlay.subtitle([], null);
     this.overlay.clearCue();
@@ -163,11 +193,13 @@ export class Director {
       this.clearStuck();
       this.overlay.reveal();
       this.phase = "descent";
+      this.sound.descent();
       // Ask for the reading now, so it arrives while the descent plays.
       const reading = Promise.race([this.reader.read(scan), sleep(TIMING.readDeadlineMs).then(() => NO_RESULT)]);
       await bounded(this.stage.descent(urls), TIMING.stepMaxMs, "stage.descent");
       if (!live()) return;
       this.phase = "reveal";
+      this.sound.reveal();
       await bounded(this.stage.reveal(urls), TIMING.stepMaxMs, "stage.reveal");
       if (!live()) return;
       const outcome = await reading;
@@ -178,24 +210,36 @@ export class Director {
         const texts = outcome.words.map((w) => w.text);
         this.overlay.subtitle(texts, null);
         const speakMaxMs = texts.length * TIMING.speakPerWordMs + TIMING.speakSlackMs;
-        const spoke = await bounded(
-          this.voice
-            .speak(texts, (i) => {
-              if (!live()) return;
-              this.stage.highlight(i);
-              this.overlay.subtitle(texts, i);
-            })
-            .then(() => true),
-          speakMaxMs,
-          "voice.speak",
-        );
+        this.sound.voiceActive(true);
+        let spoke: true | undefined;
+        try {
+          spoke = await bounded(
+            this.voice
+              .speak(texts, (i) => {
+                if (!live()) return;
+                this.stage.highlight(i);
+                this.overlay.subtitle(texts, i);
+              })
+              .then(() => true),
+            speakMaxMs,
+            "voice.speak",
+          );
+        } finally {
+          if (live()) this.sound.voiceActive(false);
+        }
         if (!live()) return;
         if (spoke === undefined) this.voice.cancel();
         this.stage.highlight(texts.length);
         this.overlay.subtitle(texts, texts.length);
       } else {
         this.overlay.alarm(true);
-        const alarmed = await bounded(this.voice.alarm().then(() => true), TIMING.alarmMaxMs, "voice.alarm");
+        this.sound.voiceActive(true);
+        let alarmed: true | undefined;
+        try {
+          alarmed = await bounded(this.voice.alarm().then(() => true), TIMING.alarmMaxMs, "voice.alarm");
+        } finally {
+          if (live()) this.sound.voiceActive(false);
+        }
         if (!live()) return;
         if (alarmed === undefined) this.voice.cancel();
       }
@@ -203,12 +247,14 @@ export class Director {
       if (!live()) return;
       this.phase = "hold";
       this.stage.hold();
+      this.sound.hold();
     } catch (err) {
       console.error("show step failed:", err);
       if (live()) {
         this.phase = "hold";
         try {
           this.stage.hold();
+          this.sound.hold();
         } catch (holdErr) {
           console.error("show step failed:", holdErr);
         }

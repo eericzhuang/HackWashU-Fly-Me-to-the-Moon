@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Word } from "../../shared/types";
 import type { Outcome } from "../../src/ai/classify";
 import type { FeedEvent } from "../../src/feed/types";
-import { Director, sleep, TIMING, type Overlay, type Reader, type Stage, type Voice } from "../../src/show/director";
+import { Director, sleep, TIMING, type Overlay, type Reader, type Soundtrack, type Stage, type Voice } from "../../src/show/director";
 
 const words: Word[] = [
   { text: "Meet", box: [], confidence: 0.9 },
@@ -37,8 +37,13 @@ function setup(outcome: Outcome, readDelayMs = 100) {
     alarm: vi.fn(() => sleep(2000)),
     cancel: vi.fn(),
   } satisfies Voice;
-  const director = new Director(stage, overlay, reader, voice);
-  return { director, stage, overlay, reader, voice };
+  const sound = {
+    arm: vi.fn(async () => {}), mute: vi.fn(), idle: vi.fn(), ledOn: vi.fn(),
+    photoLanded: vi.fn(), combining: vi.fn(), descent: vi.fn(), reveal: vi.fn(),
+    hold: vi.fn(), voiceActive: vi.fn(), heldSun: vi.fn(),
+  } satisfies Soundtrack;
+  const director = new Director(stage, overlay, reader, voice, sound);
+  return { director, stage, overlay, reader, voice, sound };
 }
 
 function capture(d: Director): void {
@@ -54,6 +59,66 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe("Director", () => {
+  it("forwards capture cues in order and resets sound for a new scan", () => {
+    const { director, sound } = setup(OK);
+    expect(sound.idle).toHaveBeenCalledTimes(1);
+    director.handle({ type: "scanStarted", scanId: "t1" });
+    director.handle({ type: "ledOn", led: 0 });
+    director.handle({ type: "photoLanded", led: 0, url: "u0" });
+    director.handle({ type: "combining" });
+    director.handle({ type: "scanStarted", scanId: "t2" });
+    expect(sound.idle).toHaveBeenCalledTimes(3);
+    expect(sound.ledOn).toHaveBeenCalledWith(0);
+    expect(sound.photoLanded).toHaveBeenCalledWith(0);
+    expect(sound.combining).toHaveBeenCalledTimes(1);
+    expect(sound.idle.mock.invocationCallOrder[1]).toBeLessThan(sound.ledOn.mock.invocationCallOrder[0]);
+    expect(sound.ledOn.mock.invocationCallOrder[0]).toBeLessThan(sound.photoLanded.mock.invocationCallOrder[0]);
+    expect(sound.photoLanded.mock.invocationCallOrder[0]).toBeLessThan(sound.combining.mock.invocationCallOrder[0]);
+    expect(sound.combining.mock.invocationCallOrder[0]).toBeLessThan(sound.idle.mock.invocationCallOrder[2]);
+  });
+
+  it("arms the soundtrack once from a gesture", () => {
+    const { director, sound } = setup(OK);
+    director.arm();
+    director.arm();
+    expect(sound.arm).toHaveBeenCalledTimes(1);
+  });
+
+  it("ducks through normal speech and restores before hold", async () => {
+    const { director, sound } = setup(OK);
+    capture(director);
+    director.handle(DONE);
+    expect(sound.descent).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(sound.reveal).toHaveBeenCalledTimes(1);
+    expect(sound.voiceActive).toHaveBeenLastCalledWith(true);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(sound.voiceActive).toHaveBeenLastCalledWith(false);
+    await vi.advanceTimersByTimeAsync(TIMING.holdAfterMs);
+    expect(sound.hold).toHaveBeenCalledTimes(1);
+  });
+
+  it("ducks the 1202 line and restores after the alarm", async () => {
+    const { director, sound } = setup(WEAK);
+    capture(director);
+    director.handle(DONE);
+    await vi.advanceTimersByTimeAsync(1600);
+    expect(sound.voiceActive).toHaveBeenLastCalledWith(true);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(sound.voiceActive).toHaveBeenLastCalledWith(false);
+  });
+
+  it("does not restore a stale voice over a new scan", async () => {
+    const { director, sound } = setup(OK);
+    capture(director);
+    director.handle(DONE);
+    await vi.advanceTimersByTimeAsync(1600);
+    director.handle({ type: "scanStarted", scanId: "t2" });
+    const callsAfterRestart = sound.voiceActive.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(sound.voiceActive.mock.calls.length).toBe(callsAfterRestart);
+    expect(sound.voiceActive).toHaveBeenLastCalledWith(false);
+  });
   it("starts idle", () => {
     const { director, stage, overlay } = setup(OK);
     expect(director.phase).toBe("idle");
