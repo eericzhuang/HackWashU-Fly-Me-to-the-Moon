@@ -42,6 +42,7 @@ export class PlateDeck {
     });
     if (!texture) return;
     if (gen !== this.gen) return void texture.dispose(); // a new scan started meanwhile
+    if (this.sinking) return void texture.dispose(); // the photos are already going into the moon: too late
     for (const p of this.plates) p?.anim.progress(1); // an earlier close-up parks at once
     this.remove(led);
     const aspect = texture.image.width / texture.image.height;
