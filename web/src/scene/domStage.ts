@@ -1,6 +1,7 @@
 import type { Word } from "../../shared/types";
 import type { DoneUrls } from "../feed/types";
 import type { Stage } from "../show/director";
+import { highlightBoxes, renderBoxes } from "./wordBoxes";
 
 const SUN = ["n", "e", "s", "w"]; // LED index -> side the light comes from
 export const CLOSEUP_MS = 2000;
@@ -94,33 +95,11 @@ export class DomStage implements Stage {
 
   /** One box per word, positioned in % of the reveal image, so it follows the image's size. */
   showWords(words: Word[], confident: number[]): void {
-    const w = this.revealImg.naturalWidth || 1;
-    const h = this.revealImg.naturalHeight || 1;
-    this.boxes.replaceChildren(
-      ...words.map((word, i) => {
-        const b = div(confident.includes(i) ? "box confident" : "box");
-        if (word.box.length === 0) {
-          b.hidden = true;
-          return b;
-        }
-        const xs = word.box.map((p) => p[0]);
-        const ys = word.box.map((p) => p[1]);
-        const x0 = Math.min(...xs);
-        const y0 = Math.min(...ys);
-        b.style.left = `${(x0 / w) * 100}%`;
-        b.style.top = `${(y0 / h) * 100}%`;
-        b.style.width = `${((Math.max(...xs) - x0) / w) * 100}%`;
-        b.style.height = `${((Math.max(...ys) - y0) / h) * 100}%`;
-        return b;
-      }),
-    );
+    renderBoxes(this.boxes, words, confident, this.revealImg.naturalWidth, this.revealImg.naturalHeight);
   }
 
   highlight(index: number | null): void {
-    Array.from(this.boxes.children).forEach((b, i) => {
-      b.classList.toggle("said", index !== null && i < index);
-      b.classList.toggle("now", i === index);
-    });
+    highlightBoxes(this.boxes, index);
   }
 
   hold(): void {
