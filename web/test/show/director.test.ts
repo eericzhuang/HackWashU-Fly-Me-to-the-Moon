@@ -153,4 +153,31 @@ describe("Director", () => {
     director.skip();
     expect(stage.skip).toHaveBeenCalledTimes(1);
   });
+
+  it("ends in hold and cancels the voice when speak never settles", async () => {
+    const { director, stage, voice } = setup(OK);
+    voice.speak.mockImplementation(() => new Promise<void>(() => {})); // never resolves
+    capture(director);
+    director.handle(DONE);
+
+    const speakBoundMs = OK.words.length * TIMING.speakPerWordMs + TIMING.speakSlackMs;
+    await vi.advanceTimersByTimeAsync(1500 /* descent */ + speakBoundMs + TIMING.holdAfterMs + 100);
+    expect(director.phase).toBe("hold");
+    expect(voice.cancel).toHaveBeenCalled();
+    expect(stage.hold).toHaveBeenCalledTimes(1);
+  });
+
+  it("ends in hold and logs the error when a stage step rejects", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { director, stage } = setup(OK);
+    stage.descent.mockImplementation(() => Promise.reject(new Error("nope")));
+    capture(director);
+    director.handle(DONE);
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(errorSpy).toHaveBeenCalledWith("show step failed:", expect.any(Error));
+    expect(director.phase).toBe("hold");
+    expect(stage.hold).toHaveBeenCalledTimes(1);
+    errorSpy.mockRestore();
+  });
 });

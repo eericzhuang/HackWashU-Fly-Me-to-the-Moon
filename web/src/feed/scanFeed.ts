@@ -11,6 +11,7 @@ export class ScanFeed implements Feed {
   private timer: ReturnType<typeof setInterval> | undefined;
   private onEvent: (e: FeedEvent) => void = () => {};
   private busy = false;
+  private failing = false;
 
   // The arrow keeps `fetch` unbound from this object (calling it as a method throws "Illegal invocation").
   constructor(
@@ -44,17 +45,30 @@ export class ScanFeed implements Feed {
   async poll(): Promise<void> {
     if (this.busy) return;
     this.busy = true;
+    let events: FeedEvent[] = [];
     try {
       const res = await this.fetchImpl(`/scan/${this.name}/meta.json`, { cache: "no-store" });
       if (!res.ok) return;
       const next = deriveState(this.name, (await res.json()) as Meta);
-      const events = diffStates(this.state, next);
+      events = diffStates(this.state, next);
       this.state = next;
-      for (const e of events) this.onEvent(e);
-    } catch {
-      // keep the last state
+      this.failing = false;
+    } catch (err) {
+      // Keep the last state; only the first failure of a streak is worth logging.
+      if (!this.failing) {
+        this.failing = true;
+        console.warn("meta.json poll failed:", err);
+      }
     } finally {
       this.busy = false;
+    }
+    // Dispatched after the try/finally, each isolated: one bad handler must not drop the rest.
+    for (const e of events) {
+      try {
+        this.onEvent(e);
+      } catch (err) {
+        console.error("show event failed:", e.type, err);
+      }
     }
   }
 }

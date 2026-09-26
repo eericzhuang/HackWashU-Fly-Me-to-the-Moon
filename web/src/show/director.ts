@@ -54,9 +54,25 @@ export const TIMING = {
   readDeadlineMs: 8000, // after "done": no OCR by then -> 1202 alarm
   holdAfterMs: 3000, // after reading, before "hold the sun"
   stuckMs: 120_000, // no event this long while capturing -> "waiting for photo…"
+  stepMaxMs: 10_000, // bound for stage.descent and stage.reveal
+  speakPerWordMs: 1000, // bound for voice.speak: words.length * speakPerWordMs + speakSlackMs
+  speakSlackMs: 5000,
+  alarmMaxMs: 15_000, // bound for voice.alarm
 };
 
 export const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/** Never lets a step hang the show: resolves with `p`'s value, or `undefined` after `ms`. */
+export function bounded<T>(p: Promise<T>, ms: number, label: string): Promise<T | undefined> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<undefined>((resolve) => {
+    timer = setTimeout(() => {
+      console.warn(`${label} timed out after ${ms} ms`);
+      resolve(undefined);
+    }, ms);
+  });
+  return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
+}
 
 const NO_RESULT: Outcome = { kind: "error", words: [], confident: [] };
 
@@ -143,40 +159,61 @@ export class Director {
   private async finish(scan: string, revealUrl: string): Promise<void> {
     const gen = this.gen;
     const live = () => gen === this.gen;
-    this.clearStuck();
-    this.overlay.reveal();
-    this.phase = "descent";
-    // Ask for the reading now, so it arrives while the descent plays.
-    const reading = Promise.race([this.reader.read(scan), sleep(TIMING.readDeadlineMs).then(() => NO_RESULT)]);
-    await this.stage.descent(revealUrl);
-    if (!live()) return;
-    this.phase = "reveal";
-    await this.stage.reveal(revealUrl);
-    if (!live()) return;
-    const outcome = await reading;
-    if (!live()) return;
+    try {
+      this.clearStuck();
+      this.overlay.reveal();
+      this.phase = "descent";
+      // Ask for the reading now, so it arrives while the descent plays.
+      const reading = Promise.race([this.reader.read(scan), sleep(TIMING.readDeadlineMs).then(() => NO_RESULT)]);
+      await bounded(this.stage.descent(revealUrl), TIMING.stepMaxMs, "stage.descent");
+      if (!live()) return;
+      this.phase = "reveal";
+      await bounded(this.stage.reveal(revealUrl), TIMING.stepMaxMs, "stage.reveal");
+      if (!live()) return;
+      const outcome = await reading;
+      if (!live()) return;
 
-    this.stage.showWords(outcome.words, outcome.confident);
-    if (outcome.kind === "ok") {
-      const texts = outcome.words.map((w) => w.text);
-      this.overlay.subtitle(texts, null);
-      await this.voice.speak(texts, (i) => {
+      this.stage.showWords(outcome.words, outcome.confident);
+      if (outcome.kind === "ok") {
+        const texts = outcome.words.map((w) => w.text);
+        this.overlay.subtitle(texts, null);
+        const speakMaxMs = texts.length * TIMING.speakPerWordMs + TIMING.speakSlackMs;
+        const spoke = await bounded(
+          this.voice
+            .speak(texts, (i) => {
+              if (!live()) return;
+              this.stage.highlight(i);
+              this.overlay.subtitle(texts, i);
+            })
+            .then(() => true),
+          speakMaxMs,
+          "voice.speak",
+        );
         if (!live()) return;
-        this.stage.highlight(i);
-        this.overlay.subtitle(texts, i);
-      });
+        if (spoke === undefined) this.voice.cancel();
+        this.stage.highlight(texts.length);
+        this.overlay.subtitle(texts, texts.length);
+      } else {
+        this.overlay.alarm(true);
+        const alarmed = await bounded(this.voice.alarm().then(() => true), TIMING.alarmMaxMs, "voice.alarm");
+        if (!live()) return;
+        if (alarmed === undefined) this.voice.cancel();
+      }
+      await sleep(TIMING.holdAfterMs);
       if (!live()) return;
-      this.stage.highlight(texts.length);
-      this.overlay.subtitle(texts, texts.length);
-    } else {
-      this.overlay.alarm(true);
-      await this.voice.alarm();
-      if (!live()) return;
+      this.phase = "hold";
+      this.stage.hold();
+    } catch (err) {
+      console.error("show step failed:", err);
+      if (live()) {
+        this.phase = "hold";
+        try {
+          this.stage.hold();
+        } catch (holdErr) {
+          console.error("show step failed:", holdErr);
+        }
+      }
     }
-    await sleep(TIMING.holdAfterMs);
-    if (!live()) return;
-    this.phase = "hold";
-    this.stage.hold();
   }
 
   private watchStuck(): void {

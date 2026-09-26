@@ -58,4 +58,48 @@ describe("ScanFeed", () => {
     await vi.advanceTimersByTimeAsync(2000);
     expect(fetchImpl.mock.calls.length).toBe(calls);
   });
+
+  it("a handler that throws still lets the later events of the same batch through, and logs the error", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchImpl = replies(
+      { status: "capturing", captured: [0, 1, 2], started: "t1" },
+      { status: "capturing", captured: [0, 1, 2, 3], started: "t1" },
+    );
+    const feed = new ScanFeed("latest", 250, fetchImpl);
+    const events: FeedEvent[] = [];
+    feed.start((e) => {
+      if (e.type === "photoLanded" && e.led === 3) throw new Error("boom");
+      events.push(e);
+    });
+
+    await vi.advanceTimersByTimeAsync(0); // establishes captured [0,1,2]
+    await vi.advanceTimersByTimeAsync(250); // jumps to [0,1,2,3]: photoLanded(3) throws, combining must still land
+
+    expect(events.map((e) => e.type)).toContain("combining");
+    expect(errorSpy).toHaveBeenCalledWith("show event failed:", "photoLanded", expect.any(Error));
+    feed.stop();
+  });
+
+  it("logs a malformed-JSON failure streak once, then recovers on the next good poll", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const good: Meta = { status: "capturing", captured: [0], started: "t1" };
+    let i = 0;
+    const fetchImpl = vi.fn<typeof fetch>(async () => {
+      i++;
+      if (i <= 2) return new Response("{not json", { status: 200 });
+      return new Response(JSON.stringify(good), { status: 200 });
+    });
+    const feed = new ScanFeed("latest", 250, fetchImpl);
+    const events: FeedEvent[] = [];
+    feed.start((e) => events.push(e));
+
+    await vi.advanceTimersByTimeAsync(0); // poll 1: malformed
+    await vi.advanceTimersByTimeAsync(250); // poll 2: malformed
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(feed.current).toBeNull();
+
+    await vi.advanceTimersByTimeAsync(250); // poll 3: good
+    expect(feed.current).toMatchObject({ scanId: "t1", captured: [0] });
+    feed.stop();
+  });
 });

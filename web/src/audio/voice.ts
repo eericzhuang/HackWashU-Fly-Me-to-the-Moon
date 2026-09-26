@@ -29,6 +29,8 @@ export class SilentVoice implements Voice {
 export class BrowserVoice implements Voice {
   muted = false;
   private finish: (() => void) | null = null;
+  // Chrome can garbage-collect an utterance nothing references, and then never fire onend.
+  private utterance: SpeechSynthesisUtterance | null = null;
 
   speak(words: string[], onWord: (i: number) => void): Promise<void> {
     return this.say(words, onWord);
@@ -67,6 +69,7 @@ export class BrowserVoice implements Voice {
       const done = () => {
         clearInterval(estimate);
         if (this.finish === done) this.finish = null;
+        if (this.utterance === u) this.utterance = null;
         resolve();
       };
       u.onstart = () => {
@@ -84,6 +87,7 @@ export class BrowserVoice implements Voice {
       u.onend = done;
       u.onerror = done;
       this.finish = done;
+      this.utterance = u;
       speechSynthesis.speak(u);
       // Without a user gesture Chrome drops speech silently; never hang the show on it.
       setTimeout(() => {
