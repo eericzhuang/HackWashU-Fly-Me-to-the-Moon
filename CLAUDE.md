@@ -54,6 +54,11 @@ terminator/viewer.py    animated live window for phone.py (moon theme, Futura): 
 tools/simulate.py       synthetic scans for testing without hardware
 tools/import_photos.py  4 hand-taken phone photos (N,E,S,W) -> aligned scan folder + reveal
 tools/explain.py        one labeled PNG of every reveal step (for debugging and the pitch)
+web/                    web UI (Vite + TS), the audience-facing show. Only reads out/.
+  server/               Vite plugin: GET /scan/:name/:file (contract files only, no-store),
+                        POST /api/read (Google Vision; key in web/.env.local, never in the browser)
+  src/feed/             meta.json -> show events (ScanFeed live, ReplayFeed for dev/backup demo)
+  src/show/director.ts  the show's state machine; Stage/Overlay/Voice are swappable (L0 = DOM/CSS)
 ```
 
 ## Commands
@@ -69,6 +74,11 @@ python -m terminator.scan --list-cameras              # snapshot each camera ind
 python -m terminator.scan --manual [--camera 1]       # no Arduino: prompts you to move a flashlight
 python tools/import_photos.py out/test1               # -> out/test1_scan/ (aligns on ink first)
 python tools/explain.py out/latest                    # -> out/latest/explain.png
+cd web && npm ci                                      # once (Node >= 20.19)
+cd web && npm run dev                                 # http://localhost:5173 watches out/latest
+#   http://localhost:5173/?replay=sim&pace=2500       plays out/sim as if live (no hardware)
+cd web && npm test                                    # unit tests
+cd web && npm run demo                                # build + serve for the demo machine
 ```
 
 ## Hardware
@@ -131,6 +141,7 @@ Tuning knobs are CLI flags: `--method --sigma --hp --smooth --lo --hi --clahe --
       + ~17 s align/combine. The south shot had a long cable shadow (grazing light!).
 - [x] Live window (terminator.viewer) + explain.png per scan; dry-run with the real photos passes.
       Slides start after status "done" is published, so the web UI is never held up by them.
+- [x] Web UI L0 (branch ui): live/replay feeds, Director, CSS stand-in visuals, Vision OCR, browser speech, 1202 alarm
 - [ ] Keep cables away from the paper; re-pick rig.json if the phone or paper moves; tune `--lo`
 - [ ] Optional: 3D relief view from the depth map (already computed in reveal.py)
 
