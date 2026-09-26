@@ -1,0 +1,9 @@
+out/*
+!out/sim/
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+# original code drop and an old output, kept locally only
+terminator.zip
+/reveal.png

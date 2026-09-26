@@ -1,0 +1,5 @@
+opencv-python>=4.8
+numpy>=1.24
+pyserial>=3.5
+pillow>=10.0
+pymobiledevice3>=11.0   # terminator.phone: pull photos from the iPhone over USB

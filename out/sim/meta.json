@@ -1,0 +1,18 @@
+{
+  "status": "done",
+  "directions": [
+    "north",
+    "east",
+    "south",
+    "west"
+  ],
+  "captured": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "seconds": 0.0,
+  "simulated": true,
+  "text": "Meet me on the moon at 9"
+}
