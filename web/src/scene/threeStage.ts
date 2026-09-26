@@ -7,6 +7,7 @@ import { loadSkyAssets, type SkyAssets } from "./assets";
 import { DomStage } from "./domStage";
 import { Engine } from "./engine";
 import { MOON, Moon } from "./moon";
+import { PlateDeck } from "./plates";
 import { Stars } from "./stars";
 
 /** Look and timing (the dev panel tunes these live). */
@@ -20,8 +21,8 @@ const DIVE_CAMERA = new THREE.Vector3(0.12, 0.18, 1.85);
 const DIVE_LOOK = new THREE.Vector3(0.02, 0.08, 0.9);
 const DIVE_LED = 3;
 
-/** The three.js picture behind the Stage interface. This version draws the moon and the sky in 3D and still
- *  borrows the photos and the reveal page from DomStage (tasks 6 and 7 move them into 3D). */
+/** The three.js picture behind the Stage interface. This version draws the moon, the sky and the photos in 3D
+ *  and still borrows the reveal page from DomStage (task 7 moves it into 3D). */
 export class ThreeStage implements Stage {
   static async create(glRoot: HTMLElement, domRoot: HTMLElement): Promise<ThreeStage> {
     const engine = new Engine(glRoot);
@@ -32,6 +33,7 @@ export class ThreeStage implements Stage {
   readonly engine: Engine;
   readonly moon: Moon;
   private readonly stars: Stars;
+  private readonly plates = new PlateDeck();
   private readonly dom: DomStage;
   private readonly look = new THREE.Vector3();
   private readonly sky = NIGHT.clone();
@@ -41,7 +43,7 @@ export class ThreeStage implements Stage {
     this.engine = engine;
     this.moon = new Moon(assets);
     this.stars = new Stars(assets.stars);
-    engine.scene.add(this.stars.points, this.moon.mesh);
+    engine.scene.add(this.stars.points, this.moon.mesh, this.plates.group);
     domRoot.classList.add("three");
     this.dom = new DomStage(domRoot);
     engine.onFrame((f) => {
@@ -64,16 +66,15 @@ export class ThreeStage implements Stage {
 
   ledOn(led: number): void {
     this.moon.lightFrom(led);
-    this.dom.ledOn(led);
   }
 
   photoLanded(led: number, url: string): void {
-    this.dom.photoLanded(led, url);
+    void this.plates.land(led, url);
   }
 
   combining(): void {
     this.moon.orbit();
-    this.dom.combining();
+    this.plates.sink();
   }
 
   async descent(urls: DoneUrls): Promise<void> {
@@ -108,6 +109,7 @@ export class ThreeStage implements Stage {
     this.moves = [];
     for (const m of running) m.progress(1); // tweens jump to their end, waits resolve
     this.moon.finishTurn();
+    this.plates.skip();
     this.dom.skip();
   }
 
@@ -123,6 +125,7 @@ export class ThreeStage implements Stage {
     this.engine.camera.position.copy(HOME);
     this.look.set(0, 0, 0);
     this.sky.copy(NIGHT);
+    this.plates.clear();
     this.moon.showFull(turnSeconds);
     this.track(gsap.to(this.engine.frameGain, { gain, duration: 0.6 }));
   }
