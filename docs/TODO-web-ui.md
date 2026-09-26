@@ -17,9 +17,10 @@ Plans: `docs/superpowers/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/superpow
 - **L1 task 7:** 3D reveal page, word boxes, and hold-the-sun relighting from the four captures.
 - **L1 task 8:** D-key tuning panel for the moon, bloom, capture dim, and page relighting.
 - **L1 task 9:** documentation updated (`CLAUDE.md` layout/commands/status, spec §8 layer-order note, and this status list).
+- **L1 final review:** passed after fixing stale reveal loads that could brighten a new scan and RGB relighting for green/blue LEDs. The targeted re-review found no new issues.
 
 ## Remaining L1 work
-- [ ] Final whole-branch review of L1
+- None in code. A real color scan and GPU inspection remain on the demo-machine rehearsal checklist.
 
 ## Later layers
 - [ ] Sound and Cloud TTS: Tone.js chord walk, Quindar tones, Cloud TTS radio voice (enable **Cloud Text-to-Speech** on the Google project first)
@@ -35,6 +36,7 @@ Plans: `docs/superpowers/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/superpow
 - [ ] Full real scan on the Mac: frame rate, M (mute) and F (fullscreen) keys
 - [ ] Screen-brightness A/B test (screen black vs UI on during capture); tune `STAGE.captureDim` (0.45)
 - [ ] Real OCR time on a real scan's reveal.png vs the 8 s deadline
+- [ ] Check the relit page with a real color phone scan, especially green and blue LED shots
 
 ## Known minor issues (accepted or deferred)
 - `vite build` passes with warnings: existing extensionless-import forward-compatibility warning, plus the L1 `threeStage` chunk at about 786 kB (over Vite's 500 kB advisory threshold).
@@ -42,3 +44,4 @@ Plans: `docs/superpowers/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/superpow
 - `assets.ts`: fetches of `moon_height.json`/`stars.json` don't check `r.ok`.
 - `cache.ts`: the temp file name isn't unique, so two windows reading the same new scan at once could collide.
 - `scanFeed`, `voice`, `domStage`: small items listed in `.superpowers/sdd/progress.md` (local only).
+- If 3D assets fail during startup, the CSS stage appears but the started WebGL render loop continues in the background; defer cleanup.
