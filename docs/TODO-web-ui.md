@@ -16,6 +16,7 @@ Plans: `docs/superpowers/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/superpow
 - **L1 task 6:** photos as 3D cards (close-up, park, spiral into the moon); the late-photo fix (`4e98a78`) passed independent review.
 - **L1 task 7:** 3D reveal page, word boxes, and hold-the-sun relighting from the four captures.
 - **L1 task 8:** D-key tuning panel for the moon, bloom, capture dim, and page relighting.
+- **L1 task 9:** documentation updated (`CLAUDE.md` layout/commands/status, spec §8 layer-order note, and this status list).
 
 ## Remaining L1 work
 - [ ] Final whole-branch review of L1
