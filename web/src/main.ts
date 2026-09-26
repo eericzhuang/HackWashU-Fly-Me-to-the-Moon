@@ -1,4 +1,8 @@
 import "./style.css";
+import "@fontsource/jost/400.css";
+import "@fontsource/jost/500.css";
+import "@fontsource/jost/600.css";
+import "@fontsource/jetbrains-mono/400.css";
 import { HttpReader } from "./ai/reader";
 import { BrowserVoice } from "./audio/voice";
 import { ReplayFeed } from "./feed/replayFeed";
