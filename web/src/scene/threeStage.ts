@@ -39,6 +39,8 @@ export class ThreeStage implements Stage {
   private readonly look = new THREE.Vector3();
   private readonly sky = NIGHT.clone();
   private moves: gsap.core.Animation[] = [];
+  private holdRequested = false;
+  private sunHeld = false;
 
   private constructor(engine: Engine, assets: SkyAssets, domRoot: HTMLElement) {
     this.engine = engine;
@@ -46,6 +48,7 @@ export class ThreeStage implements Stage {
     this.stars = new Stars(assets.stars);
     this.page = new PageView(engine.camera, domRoot);
     this.sunHandle = new SunHandle(domRoot);
+    this.page.onMeasurementsReady(() => this.startHoldIfReady());
     engine.scene.add(this.stars.points, this.moon.mesh, this.plates.group);
     domRoot.classList.add("three");
     engine.onFrame((f) => {
@@ -79,12 +82,15 @@ export class ThreeStage implements Stage {
     const s = STAGE.sunriseSeconds;
     this.track(gsap.to(this.engine.frameGain, { gain: 1, duration: s }));
     this.track(gsap.to(this.sky, { r: DAWN.r, g: DAWN.g, b: DAWN.b, duration: s }));
-    this.page.show(s);
+    if (this.page.shows(urls.reveal)) this.page.show(s);
     await this.wait(s);
   }
   showWords(words: Word[], confident: number[]): void { this.page.showWords(words, confident); }
   highlight(index: number | null): void { this.page.highlight(index); }
-  hold(): void { if (this.page.relight(STAGE.relightSeconds)) this.sunHandle.start(); }
+  hold(): void {
+    this.holdRequested = true;
+    this.startHoldIfReady();
+  }
 
   skip(): void {
     const running = this.moves;
@@ -99,6 +105,8 @@ export class ThreeStage implements Stage {
   renderOnce(dt?: number): void { this.engine.renderOnce(dt); }
 
   private reset(gain: number, turnSeconds: number): void {
+    this.holdRequested = false;
+    this.sunHeld = false;
     const running = this.moves;
     this.moves = [];
     for (const m of running) m.progress(1).kill();
@@ -110,6 +118,11 @@ export class ThreeStage implements Stage {
     this.sunHandle.stop();
     this.moon.showFull(turnSeconds);
     this.track(gsap.to(this.engine.frameGain, { gain, duration: 0.6 }));
+  }
+  private startHoldIfReady(): void {
+    if (!this.holdRequested || this.sunHeld || !this.page.relight(STAGE.relightSeconds)) return;
+    this.sunHeld = true;
+    this.sunHandle.start();
   }
   private wait(seconds: number): Promise<void> { return new Promise((resolve) => this.track(gsap.delayedCall(seconds, resolve))); }
   private track(a: gsap.core.Animation): void { this.moves.push(a); }

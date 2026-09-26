@@ -60,6 +60,7 @@ export class PageView {
   private dirsReady = false;
   private gen = 0;
   private anims: gsap.core.Animation[] = [];
+  private measurementsReady: (() => void) | null = null;
 
   constructor(camera: THREE.Camera, domRoot: HTMLElement) {
     const material = new THREE.ShaderMaterial({
@@ -85,28 +86,43 @@ export class PageView {
   get uniforms(): Record<string, THREE.IUniform> { return this.mesh.material.uniforms; }
   shows(url: string): boolean { return this.revealUrl === url; }
 
+  onMeasurementsReady(callback: () => void): void { this.measurementsReady = callback; }
+
   async load(urls: DoneUrls): Promise<void> {
     const gen = ++this.gen;
-    this.revealUrl = urls.reveal;
+    this.revealUrl = "";
     this.dirsReady = false;
+    this.mesh.visible = false;
+    this.uniforms.opacity.value = 0;
+    this.uniforms.relit.value = 0;
+    this.words.classList.remove("on");
+    this.clearTextures();
+    this.imageSize = [2, 1];
     try {
       const reveal = await loadPhoto(urls.reveal);
       if (gen !== this.gen) return void reveal.dispose();
       this.swap("revealMap", reveal);
       this.imageSize = [reveal.image.width, reveal.image.height];
+      this.revealUrl = urls.reveal;
     } catch (e) {
       console.warn("reveal image failed to load:", e);
+      if (gen === this.gen) this.clearTextures();
       return;
     }
     if (urls.dirs.length !== 4) return;
-    Promise.all(urls.dirs.map(loadMeasurement)).then(
-      (photos) => {
-        if (gen !== this.gen) return photos.forEach((t) => t.dispose());
-        photos.forEach((t, k) => this.swap(`d${k}`, t));
-        this.dirsReady = true;
-      },
-      (e: unknown) => console.warn("photos for relighting failed to load:", e),
-    );
+    void Promise.allSettled(urls.dirs.map(loadMeasurement)).then((results) => {
+      const photos = results.flatMap((r) => r.status === "fulfilled" ? [r.value] : []);
+      if (gen !== this.gen) return photos.forEach((t) => t.dispose());
+      const failure = results.find((r) => r.status === "rejected");
+      if (failure?.status === "rejected") {
+        photos.forEach((t) => t.dispose());
+        console.warn("photos for relighting failed to load:", failure.reason);
+        return;
+      }
+      photos.forEach((t, k) => this.swap(`d${k}`, t));
+      this.dirsReady = true;
+      this.measurementsReady?.();
+    });
   }
 
   show(seconds: number): void {
@@ -125,6 +141,9 @@ export class PageView {
     this.words.classList.remove("on");
     this.boxes.replaceChildren();
     this.revealUrl = "";
+    this.dirsReady = false;
+    this.clearTextures();
+    this.imageSize = [2, 1];
   }
 
   relight(seconds: number): boolean {
@@ -159,6 +178,12 @@ export class PageView {
   private swap(name: string, texture: THREE.Texture): void {
     (this.uniforms[name].value as THREE.Texture | null)?.dispose();
     this.uniforms[name].value = texture;
+  }
+  private clearTextures(): void {
+    for (const name of ["revealMap", "d0", "d1", "d2", "d3"]) {
+      (this.uniforms[name].value as THREE.Texture | null)?.dispose();
+      this.uniforms[name].value = null;
+    }
   }
   private track(a: gsap.core.Animation): void { this.anims.push(a); }
 }
