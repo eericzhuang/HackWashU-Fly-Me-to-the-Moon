@@ -70,7 +70,7 @@ html, body { height: 100%; overflow: hidden; background: var(--night); color: va
 
 .plate {
   position: absolute; left: 50%; top: 50%;
-  width: 18vw; height: auto;
+  width: 18vw; height: auto; max-height: 24vh; object-fit: contain;
   translate: -50% -50%;
   opacity: 0;
   border: 1px solid #3a3f55;
