@@ -59,6 +59,9 @@ web/                    web UI (Vite + TS), the audience-facing show. Only reads
                         POST /api/read (Google Vision; key in web/.env.local, never in the browser)
   src/feed/             meta.json -> show events (ScanFeed live, ReplayFeed for dev/backup demo)
   src/show/director.ts  the show's state machine; Stage/Overlay/Voice are swappable (L0 = DOM/CSS)
+  src/scene/threeStage.ts  3D stage (three.js): NASA moon lit from the LED's side, real stars, photo cards,
+                        dive + sunrise, page relit by a sun you can hold; ?stage=dom = CSS fallback
+  public/sky/           moon/star assets (NASA SVS CGI Moon Kit, Yale BSC); tools/prepare_moon_assets.py
 ```
 
 ## Commands
@@ -76,6 +79,7 @@ python tools/import_photos.py out/test1               # -> out/test1_scan/ (alig
 python tools/explain.py out/latest                    # -> out/latest/explain.png
 cd web && npm ci                                      # once (Node >= 22.12 for tests; the demo alone runs on >= 20.19)
 cd web && npm run dev                                 # http://localhost:5173 watches out/latest
+#   ?stage=dom  the CSS stand-in stage;  D = tuning panel (moon relief, bloom, capture dim, page relight)
 #   http://localhost:5173/?replay=sim&pace=2500       plays out/sim as if live (no hardware)
 cd web && npm test                                    # unit tests
 cd web && npm run demo                                # build + serve for the demo machine
@@ -142,6 +146,7 @@ Tuning knobs are CLI flags: `--method --sigma --hp --smooth --lo --hi --clahe --
 - [x] Live window (terminator.viewer) + explain.png per scan; dry-run with the real photos passes.
       Slides start after status "done" is published, so the web UI is never held up by them.
 - [x] Web UI L0 (branch ui): live/replay feeds, Director, CSS stand-in visuals, Vision OCR (real key checked on out/sim: 7 words, conf 0.99, 0.6 s), browser speech, 1202 alarm
+- [x] Web UI L1 visuals (branch ui): three.js moon/stars/cards/page, hold-the-sun relighting, tuning panel
 - [ ] Keep cables away from the paper; re-pick rig.json if the phone or paper moves; tune `--lo`
 - [ ] Optional: 3D relief view from the depth map (already computed in reveal.py)
 
