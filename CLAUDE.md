@@ -74,7 +74,7 @@ python -m terminator.scan --list-cameras              # snapshot each camera ind
 python -m terminator.scan --manual [--camera 1]       # no Arduino: prompts you to move a flashlight
 python tools/import_photos.py out/test1               # -> out/test1_scan/ (aligns on ink first)
 python tools/explain.py out/latest                    # -> out/latest/explain.png
-cd web && npm ci                                      # once (Node >= 20.19)
+cd web && npm ci                                      # once (Node >= 22.12 for tests; the demo alone runs on >= 20.19)
 cd web && npm run dev                                 # http://localhost:5173 watches out/latest
 #   http://localhost:5173/?replay=sim&pace=2500       plays out/sim as if live (no hardware)
 cd web && npm test                                    # unit tests
@@ -141,7 +141,7 @@ Tuning knobs are CLI flags: `--method --sigma --hp --smooth --lo --hi --clahe --
       + ~17 s align/combine. The south shot had a long cable shadow (grazing light!).
 - [x] Live window (terminator.viewer) + explain.png per scan; dry-run with the real photos passes.
       Slides start after status "done" is published, so the web UI is never held up by them.
-- [x] Web UI L0 (branch ui): live/replay feeds, Director, CSS stand-in visuals, Vision OCR, browser speech, 1202 alarm
+- [x] Web UI L0 (branch ui): live/replay feeds, Director, CSS stand-in visuals, Vision OCR (real-key check pending), browser speech, 1202 alarm
 - [ ] Keep cables away from the paper; re-pick rig.json if the phone or paper moves; tune `--lo`
 - [ ] Optional: 3D relief view from the depth map (already computed in reveal.py)
 
