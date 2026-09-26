@@ -5,8 +5,12 @@ function actions() {
   return { arm: vi.fn(), skip: vi.fn(), replay: vi.fn(), idle: vi.fn(), mute: vi.fn(), fullscreen: vi.fn() } satisfies KeyActions;
 }
 
-function press(target: EventTarget, key: string): Event {
-  const e = Object.assign(new Event("keydown", { cancelable: true }), { key });
+function press(
+  target: EventTarget,
+  key: string,
+  extra: Partial<Pick<KeyboardEvent, "ctrlKey" | "metaKey" | "altKey" | "repeat">> = {},
+): Event {
+  const e = Object.assign(new Event("keydown", { cancelable: true }), { key, ...extra });
   target.dispatchEvent(e);
   return e;
 }
@@ -45,5 +49,21 @@ describe("bindKeys", () => {
     expect(a.arm).toHaveBeenCalledTimes(1);
     press(t, " ");
     expect(a.skip).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores modified and repeated key presses; a plain key still drives the show", () => {
+    const t = new EventTarget();
+    const a = actions();
+    bindKeys(t, a);
+    press(t, " "); // arm
+
+    press(t, "r", { ctrlKey: true });
+    press(t, "r", { metaKey: true });
+    press(t, "r", { altKey: true });
+    press(t, "r", { repeat: true });
+    expect(a.replay).not.toHaveBeenCalled();
+
+    press(t, "r");
+    expect(a.replay).toHaveBeenCalledTimes(1);
   });
 });

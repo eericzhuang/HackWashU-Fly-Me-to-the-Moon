@@ -23,6 +23,8 @@ export function bindKeys(target: EventTarget, a: KeyActions): void {
   target.addEventListener("keydown", (ev) => {
     const e = ev as KeyboardEvent;
     if (arm()) return;
+    // Cmd/Ctrl+R must still reload the page, Cmd+F must still search, and holding a key must not repeat it.
+    if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
     switch (e.key) {
       case " ":
         e.preventDefault();

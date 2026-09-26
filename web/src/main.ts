@@ -42,7 +42,12 @@ if (replayName) startReplay(replayName);
 bindKeys(window, {
   arm: () => director.arm(),
   skip: () => director.skip(),
-  replay: () => startReplay(replayName ?? live!.name),
+  // In replay mode R always restarts the replay; live, R must never jump into a running
+  // capture or replay a folder that isn't finished yet.
+  replay: () => {
+    if (replayName) startReplay(replayName);
+    else if (live?.current?.phase === "done") startReplay(live.name);
+  },
   idle: () => {
     replay?.stop();
     director.toIdle();
@@ -51,6 +56,7 @@ bindKeys(window, {
     voice.muted = !voice.muted;
   },
   fullscreen: () => {
-    void (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
+    const p = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    void p.catch(() => {}); // a rejected request (e.g. no user gesture) must not become an unhandled rejection
   },
 });
