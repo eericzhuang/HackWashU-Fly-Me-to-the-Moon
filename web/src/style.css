@@ -1,0 +1,148 @@
+/* L0 look: night sky, a CSS moon whose terminator turns toward the lit LED, photo plates, the reveal page.
+   L1 replaces the stage with three.js; the overlay rules stay. */
+:root {
+  --night: #04060d;
+  --moon-dark: rgba(18, 20, 29, 0.96);
+  --gold: #ffd682;
+  --led: #9dffb5;
+  --dim: #8f93a8;
+  --faint: #6b6f82;
+  --text: #e8e3d3;
+  /* Photos on screen while capturing stay this dark: the screen must not light the paper (spec §2). */
+  --capture-dim: 0.55;
+  --font: Jost, Futura, "Century Gothic", "Trebuchet MS", sans-serif;
+  --mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; background: var(--night); color: var(--text); font-family: var(--font); }
+#stage, #overlay { position: fixed; inset: 0; }
+#overlay { pointer-events: none; }
+
+/* ---------- stage ---------- */
+#stage { background: var(--night); }
+#stage[data-mode="reveal"], #stage[data-mode="hold"] {
+  background: radial-gradient(ellipse at 50% 45%, #3a3040 0%, #0c0f1d 70%);
+}
+
+.sky {
+  position: absolute; inset: 0; opacity: 0.8;
+  background-image:
+    radial-gradient(1px 1px at 20px 30px, #ffffffcc, transparent),
+    radial-gradient(1px 1px at 140px 80px, #ffffff88, transparent),
+    radial-gradient(1.5px 1.5px at 260px 170px, #ffffffaa, transparent),
+    radial-gradient(1px 1px at 90px 220px, #ffffff66, transparent),
+    radial-gradient(1px 1px at 330px 260px, #ffffff99, transparent),
+    radial-gradient(1px 1px at 200px 120px, #ffffff55, transparent);
+  background-size: 360px 300px;
+}
+
+.moon {
+  --r: min(22vh, 22vw);
+  position: absolute; left: 50%; top: 50%;
+  width: calc(var(--r) * 2); height: calc(var(--r) * 2);
+  translate: -50% -50%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 38% 34%, #a19c8e88 0 13%, transparent 14%),
+    radial-gradient(circle at 58% 48%, #a19c8e77 0 10%, transparent 11%),
+    radial-gradient(circle at 44% 64%, #a19c8e66 0 8%, transparent 9%),
+    radial-gradient(circle at 45% 40%, #f1ecdf, #cfc9b8 70%, #9f9a8b);
+  filter: drop-shadow(0 0 40px #ffd68222);
+  transition: scale 1.5s ease-in, opacity 1.5s ease-in;
+}
+/* The terminator: a dark half, turned so the lit side faces the active LED. */
+.moon::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: linear-gradient(to bottom, transparent 46%, var(--moon-dark) 54%);
+  opacity: 0;
+  transition: opacity 1.5s ease, rotate 1.5s ease;
+}
+.moon[data-sun="n"]::after { opacity: 1; rotate: 0deg; }
+.moon[data-sun="e"]::after { opacity: 1; rotate: 90deg; }
+.moon[data-sun="s"]::after { opacity: 1; rotate: 180deg; }
+.moon[data-sun="w"]::after { opacity: 1; rotate: 270deg; }
+.moon[data-sun="spin"]::after { opacity: 1; animation: spin 8s linear infinite; }
+@keyframes spin { from { rotate: 0deg; } to { rotate: 360deg; } }
+#stage[data-mode="descent"] .moon,
+#stage[data-mode="reveal"] .moon,
+#stage[data-mode="hold"] .moon { scale: 6; opacity: 0; }
+
+.plate {
+  position: absolute; left: 50%; top: 50%;
+  width: 18vw; height: auto;
+  translate: -50% -50%;
+  opacity: 0;
+  border: 1px solid #3a3f55;
+  filter: brightness(var(--capture-dim));
+  transition: left 0.8s ease, top 0.8s ease, width 0.8s ease, opacity 0.8s ease, scale 0.8s ease;
+}
+.plate[data-state="closeup"] { width: 60vw; max-height: 70vh; object-fit: contain; opacity: 1; z-index: 2; }
+.plate[data-state="parked"] { opacity: 0.85; }
+.plate[data-state="parked"][data-led="0"] { top: 13%; }
+.plate[data-state="parked"][data-led="1"] { left: 83%; }
+.plate[data-state="parked"][data-led="2"] { top: 87%; }
+.plate[data-state="parked"][data-led="3"] { left: 17%; }
+.plate[data-state="gone"] { opacity: 0; scale: 0.1; transition-duration: 2s; }
+
+.page {
+  position: absolute; left: 50%; top: 46%;
+  translate: -50% -50%;
+  opacity: 0;
+  transition: opacity 1.5s ease;
+  line-height: 0;
+}
+#stage[data-mode="reveal"] .page, #stage[data-mode="hold"] .page { opacity: 1; }
+.reveal { display: block; max-width: 80vw; max-height: 68vh; background: #f7f3ea; box-shadow: 0 0 90px #ffd68240; }
+.boxes { position: absolute; inset: 0; }
+.box {
+  position: absolute; border-radius: 4px;
+  outline: 2px solid transparent; outline-offset: 2px;
+  transition: background-color 0.2s, outline-color 0.2s, box-shadow 0.2s;
+}
+.box.confident { outline-color: #c9a44c40; }
+.box.said { outline-color: #c9a44c99; }
+.box.now { background: #ffd6824d; outline-color: #e0a82e; box-shadow: 0 0 18px #ffd682aa; }
+
+/* ---------- overlay ---------- */
+.wordmark { position: absolute; left: 3vw; top: 3.5vh; font-size: max(11px, 0.9vw); letter-spacing: 0.4em; color: var(--dim); }
+
+.idle { position: absolute; left: 0; right: 0; bottom: 11vh; text-align: center; opacity: 0; transition: opacity 0.8s; }
+#overlay[data-mode="idle"] .idle { opacity: 1; }
+.prompt { font-size: max(22px, 3vw); }
+.note { margin-top: 1.4vh; font-size: max(10px, 0.8vw); letter-spacing: 0.25em; color: var(--faint); }
+.arm { margin-top: 2.2vh; font-size: max(11px, 0.85vw); color: var(--gold); opacity: 0.8; }
+
+.cue { position: absolute; left: 3vw; bottom: 5vh; }
+.cue .kicker { font-size: max(11px, 0.95vw); letter-spacing: 0.3em; color: var(--gold); }
+.cue .line { margin-top: 0.8vh; font-size: max(16px, 1.6vw); color: #c9cbd6; }
+
+.progress { position: absolute; right: 3vw; bottom: 6vh; display: flex; gap: 1.4vw; opacity: 0; transition: opacity 0.5s; }
+#overlay[data-mode="capture"] .progress, #overlay[data-mode="combining"] .progress { opacity: 1; }
+.dot { position: relative; width: max(10px, 0.8vw); height: max(10px, 0.8vw); border-radius: 50%; border: 1px solid #4a4f66; }
+.dot::after {
+  content: attr(data-dir); position: absolute; top: 160%; left: 50%; translate: -50% 0;
+  font-size: max(9px, 0.65vw); color: var(--faint);
+}
+.dot.got { background: var(--text); border-color: var(--text); }
+.dot.active { background: var(--led); border-color: var(--led); box-shadow: 0 0 12px var(--led); animation: breathe 1.6s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: 0.45; } }
+
+.subtitle {
+  position: absolute; left: 4vw; right: 4vw; bottom: 6vh;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 0.3em 0.9em;
+  font-size: max(18px, 2.1vw); letter-spacing: 0.15em; color: #7f8396;
+}
+.subtitle .said { color: #f2efe6; }
+.subtitle .now { color: var(--gold); font-weight: 600; }
+
+.alarm {
+  position: absolute; top: 5vh; left: 50%; translate: -50% 0;
+  font-family: var(--mono); font-size: max(16px, 1.5vw); letter-spacing: 0.2em; color: #ffb347;
+  opacity: 0;
+}
+.alarm.on { animation: alarm 1.2s steps(1, end) forwards; }
+@keyframes alarm { 0% { opacity: 1; } 25% { opacity: 0; } 50% { opacity: 1; } 75% { opacity: 0; } 100% { opacity: 1; } }
+
+.waiting { position: absolute; left: 3vw; bottom: 2vh; font-size: max(11px, 0.85vw); color: var(--dim); opacity: 0; transition: opacity 0.5s; }
+.waiting.on { opacity: 1; }
