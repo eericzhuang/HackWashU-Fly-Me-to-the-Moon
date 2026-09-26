@@ -53,13 +53,13 @@
 
   ```ts
   export const CHORDS = [
-    {notes:["C3","E3","G3","B3","D4"],bass:"C2"},
-    {notes:["A2","C3","E3","G3","B3"],bass:"A1"},
-    {notes:["F2","A2","C3","E3","G3"],bass:"F1"},
-    {notes:["D3","F3","A3","C4","E4"],bass:"D2"},
+    {notes:["E3","G3","B3","D4"],bass:"E2"}, // Em7, north
+    {notes:["A2","C3","E3","G3"],bass:"A1"}, // Am7, east
+    {notes:["D3","F3","A3","C4"],bass:"D2"}, // Dm7, south
+    {notes:["G2","B2","D3","F3"],bass:"G1"}, // G7, west
   ] as const;
-  export const COMBINING = {notes:["G2","B2","D3","F3"],bass:"G1"} as const;
-  export const RESOLVED = CHORDS[0];
+  export const COMBINING = CHORDS[3];
+  export const RESOLVED = {notes:["C3","E3","G3","B3","D4"],bass:"C2"} as const; // Cmaj9
   export function heldSunMix(azimuth:number,elevation:number) {
     return {pan:Math.sin(azimuth),cutoff:500+2500*Math.sin(elevation)};
   }
