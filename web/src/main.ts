@@ -9,24 +9,33 @@ import { ReplayFeed } from "./feed/replayFeed";
 import { ScanFeed } from "./feed/scanFeed";
 import type { FeedEvent } from "./feed/types";
 import { DomStage } from "./scene/domStage";
-import { Director } from "./show/director";
+import { ThreeStage } from "./scene/threeStage";
+import { Director, type Stage } from "./show/director";
 import { bindKeys } from "./show/keys";
 import { DomOverlay } from "./ui/overlay";
 
 // URL options:
 //   ?replay=sim&pace=6000   play a finished scan folder as if live (development, or the backup demo)
 //   ?scan=latest            which folder the live feed watches (default: latest)
+//   ?stage=dom              the CSS stand-in instead of three.js (weak GPU, or no WebGL)
 const params = new URLSearchParams(location.search);
 const replayName = params.get("replay");
 const pace = Number(params.get("pace")) || 6000;
+const stageRoot = document.querySelector<HTMLElement>("#stage")!;
 
+async function makeStage(): Promise<Stage> {
+  if (params.get("stage") === "dom") return new DomStage(stageRoot);
+  try {
+    return await ThreeStage.create(document.querySelector<HTMLElement>("#gl")!, stageRoot);
+  } catch (e) {
+    console.warn("3D stage unavailable, using the CSS stage:", e);
+    return new DomStage(stageRoot);
+  }
+}
+
+const stage = await makeStage();
 const voice = new BrowserVoice();
-const director = new Director(
-  new DomStage(document.querySelector<HTMLElement>("#stage")!),
-  new DomOverlay(document.querySelector<HTMLElement>("#overlay")!),
-  new HttpReader(),
-  voice,
-);
+const director = new Director(stage, new DomOverlay(document.querySelector<HTMLElement>("#overlay")!), new HttpReader(), voice);
 const play = (e: FeedEvent) => director.handle(e);
 
 let replay: ReplayFeed | null = null;
@@ -64,3 +73,6 @@ bindKeys(window, {
     void p.catch(() => {}); // a rejected request (e.g. no user gesture) must not become an unhandled rejection
   },
 });
+
+// Dev builds: a handle for checks in the browser console (e.g. __terminator.stage.renderOnce()).
+if (import.meta.env.DEV) Object.assign(window, { __terminator: { director, stage } });

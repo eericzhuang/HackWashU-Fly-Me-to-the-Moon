@@ -146,3 +146,9 @@ html, body { height: 100%; overflow: hidden; background: var(--night); color: va
 
 .waiting { position: absolute; left: 3vw; bottom: 2vh; font-size: max(11px, 0.85vw); color: var(--dim); opacity: 0; transition: opacity 0.5s; }
 .waiting.on { opacity: 1; }
+
+/* ---------- 3D stage: the three.js canvas under the DOM stage ---------- */
+#gl { position: fixed; inset: 0; }
+#gl canvas { display: block; }
+#stage.three, #stage.three[data-mode="reveal"], #stage.three[data-mode="hold"] { background: transparent; }
+#stage.three .sky, #stage.three .moon { display: none; }
