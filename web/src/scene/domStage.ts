@@ -1,4 +1,5 @@
 import type { Word } from "../../shared/types";
+import type { DoneUrls } from "../feed/types";
 import type { Stage } from "../show/director";
 
 const SUN = ["n", "e", "s", "w"]; // LED index -> side the light comes from
@@ -71,8 +72,8 @@ export class DomStage implements Stage {
     });
   }
 
-  descent(revealUrl: string): Promise<void> {
-    this.revealImg.src = revealUrl; // start loading while the moon rushes in
+  descent(urls: DoneUrls): Promise<void> {
+    this.revealImg.src = urls.reveal; // start loading while the moon rushes in
     this.root.dataset.mode = "descent";
     return new Promise((resolve) => {
       const end = () => {
@@ -85,8 +86,8 @@ export class DomStage implements Stage {
     });
   }
 
-  async reveal(revealUrl: string): Promise<void> {
-    if (this.revealImg.getAttribute("src") !== revealUrl) this.revealImg.src = revealUrl;
+  async reveal(urls: DoneUrls): Promise<void> {
+    if (this.revealImg.getAttribute("src") !== urls.reveal) this.revealImg.src = urls.reveal;
     await this.revealImg.decode().catch(() => {}); // a broken image must not stop the show
     this.root.dataset.mode = "reveal";
   }

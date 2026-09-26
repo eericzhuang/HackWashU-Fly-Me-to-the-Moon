@@ -74,10 +74,10 @@ describe("Director", () => {
     expect(director.phase).toBe("descent");
     expect(reader.read).toHaveBeenCalledWith("sim");
     expect(overlay.reveal).toHaveBeenCalled();
-    expect(stage.descent).toHaveBeenCalledWith(DONE.urls.reveal);
+    expect(stage.descent).toHaveBeenCalledWith(DONE.urls);
 
     await vi.advanceTimersByTimeAsync(2500); // descent 1500 + two words at 300 ms each
-    expect(stage.reveal).toHaveBeenCalledWith(DONE.urls.reveal);
+    expect(stage.reveal).toHaveBeenCalledWith(DONE.urls);
     expect(stage.showWords).toHaveBeenCalledWith(words, [0, 1]);
     expect(voice.speak).toHaveBeenCalledWith(["Meet", "me"], expect.any(Function));
     expect(stage.highlight).toHaveBeenCalledWith(1);

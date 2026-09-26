@@ -1,6 +1,6 @@
 import type { Word } from "../../shared/types";
 import type { Outcome } from "../ai/classify";
-import type { FeedEvent } from "../feed/types";
+import type { DoneUrls, FeedEvent } from "../feed/types";
 
 export type ShowPhase = "idle" | "capture" | "combining" | "descent" | "reveal" | "hold";
 
@@ -11,10 +11,10 @@ export interface Stage {
   ledOn(led: number): void;
   photoLanded(led: number, url: string): void;
   combining(): void;
-  /** Resolves when the move into the page is over. */
-  descent(revealUrl: string): Promise<void>;
+  /** Resolves when the move into the page is over. Gets every image of the finished scan. */
+  descent(urls: DoneUrls): Promise<void>;
   /** Resolves once the clean reveal image is on screen. */
-  reveal(revealUrl: string): Promise<void>;
+  reveal(urls: DoneUrls): Promise<void>;
   showWords(words: Word[], confident: number[]): void;
   /** index = the word being spoken; words before it count as said. null clears. */
   highlight(index: number | null): void;
@@ -123,7 +123,7 @@ export class Director {
         this.overlay.combining();
         break;
       case "done":
-        void this.finish(e.name, e.urls.reveal);
+        void this.finish(e.name, e.urls);
         break;
     }
   }
@@ -156,7 +156,7 @@ export class Director {
     this.overlay.clearCue();
   }
 
-  private async finish(scan: string, revealUrl: string): Promise<void> {
+  private async finish(scan: string, urls: DoneUrls): Promise<void> {
     const gen = this.gen;
     const live = () => gen === this.gen;
     try {
@@ -165,10 +165,10 @@ export class Director {
       this.phase = "descent";
       // Ask for the reading now, so it arrives while the descent plays.
       const reading = Promise.race([this.reader.read(scan), sleep(TIMING.readDeadlineMs).then(() => NO_RESULT)]);
-      await bounded(this.stage.descent(revealUrl), TIMING.stepMaxMs, "stage.descent");
+      await bounded(this.stage.descent(urls), TIMING.stepMaxMs, "stage.descent");
       if (!live()) return;
       this.phase = "reveal";
-      await bounded(this.stage.reveal(revealUrl), TIMING.stepMaxMs, "stage.reveal");
+      await bounded(this.stage.reveal(urls), TIMING.stepMaxMs, "stage.reveal");
       if (!live()) return;
       const outcome = await reading;
       if (!live()) return;
