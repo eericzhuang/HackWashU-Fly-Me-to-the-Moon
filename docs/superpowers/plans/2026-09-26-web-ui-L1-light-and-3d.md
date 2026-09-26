@@ -1447,6 +1447,9 @@ export class PlateDeck {
   readonly group = new THREE.Group();
   private plates: (Plate | undefined)[] = [];
   private sinking: gsap.core.Animation | null = null;
+  // The last photo usually lands in the same poll as "combining": it must still join a sink that is only
+  // pending; only a photo that arrives after the spiral has started is dropped.
+  private spiralStarted = false;
   private gen = 0;
 
   async land(led: number, url: string): Promise<void> {
@@ -1457,6 +1460,7 @@ export class PlateDeck {
     });
     if (!texture) return;
     if (gen !== this.gen) return void texture.dispose(); // a new scan started meanwhile
+    if (this.spiralStarted) return void texture.dispose(); // the cards are already spiralling in: too late
     for (const p of this.plates) p?.anim.progress(1); // an earlier close-up parks at once
     this.remove(led);
     const aspect = texture.image.width / texture.image.height;
@@ -1480,6 +1484,7 @@ export class PlateDeck {
   sink(): void {
     this.sinking?.kill();
     this.sinking = gsap.delayedCall(PLATES.closeupSeconds, () => {
+      this.spiralStarted = true;
       this.sinking = this.spiralIn();
     });
   }
@@ -1496,6 +1501,7 @@ export class PlateDeck {
     this.gen++;
     this.sinking?.kill();
     this.sinking = null;
+    this.spiralStarted = false;
     for (let k = 0; k < 4; k++) this.remove(k);
   }
 
