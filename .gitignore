@@ -7,3 +7,10 @@ __pycache__/
 # original code drop and an old output, kept locally only
 terminator.zip
 /reveal.png
+# brainstorm mockups (local only)
+.superpowers/
+# web UI
+web/node_modules/
+web/dist/
+web/.cache/
+web/.env.local
