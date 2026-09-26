@@ -5,10 +5,11 @@ export interface KeyActions {
   idle(): void;
   mute(): void;
   fullscreen(): void;
+  dev(): void;
 }
 
 /** Browsers block sound until the user does something, so the first key (or click) only arms audio.
- *  After that: Space skip, R replay, Esc idle, M mute, F fullscreen. */
+ *  After that: Space skip, R replay, Esc idle, M mute, F fullscreen, D tuning panel. */
 export function bindKeys(target: EventTarget, a: KeyActions): void {
   let armed = false;
   const arm = (): boolean => {
@@ -44,6 +45,10 @@ export function bindKeys(target: EventTarget, a: KeyActions): void {
       case "f":
       case "F":
         a.fullscreen();
+        break;
+      case "d":
+      case "D":
+        a.dev();
         break;
     }
   });

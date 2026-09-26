@@ -38,6 +38,18 @@ const voice = new BrowserVoice();
 const director = new Director(stage, new DomOverlay(document.querySelector<HTMLElement>("#overlay")!), new HttpReader(), voice);
 const play = (e: FeedEvent) => director.handle(e);
 
+let panel: { destroy(): void } | null = null;
+async function toggleDevPanel(): Promise<void> {
+  if (panel) {
+    panel.destroy();
+    panel = null;
+    return;
+  }
+  if (!(stage instanceof ThreeStage)) return; // the CSS stage has nothing to tune
+  const { openDevPanel } = await import("./dev/devPanel");
+  panel = openDevPanel(stage);
+}
+
 let replay: ReplayFeed | null = null;
 function startReplay(name: string): void {
   replay?.stop();
@@ -72,6 +84,7 @@ bindKeys(window, {
     const p = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
     void p.catch(() => {}); // a rejected request (e.g. no user gesture) must not become an unhandled rejection
   },
+  dev: () => void toggleDevPanel(),
 });
 
 // Dev builds: a handle for checks in the browser console (e.g. __terminator.stage.renderOnce()).
