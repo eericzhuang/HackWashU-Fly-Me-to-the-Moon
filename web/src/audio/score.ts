@@ -61,7 +61,12 @@ export class ToneScore implements Soundtrack {
 
   mute(on: boolean): void {
     this.muted = on;
-    if (this.graph) this.graph.bus.mute = on;
+    if (this.graph) {
+      this.graph.bus.mute = on;
+      // Tone.Volume.mute is implemented with the volume parameter itself.
+      // Restore the current voice level when leaving mute; never ramp it while muted.
+      if (!on) this.graph.bus.volume.value = this.ducked ? -30 : -18;
+    }
     this.clearPulse();
     if (!on && this.phase.kind === "combining" && this.graph) this.startPulse();
   }
@@ -169,6 +174,7 @@ export class ToneScore implements Soundtrack {
   }
 
   private applyDuck(): void {
+    if (this.muted) return;
     this.graph?.bus.volume.rampTo(this.ducked ? -30 : -18, this.ducked ? 0.1 : 0.5);
   }
 }

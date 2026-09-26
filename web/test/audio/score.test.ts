@@ -5,23 +5,39 @@ const tone = vi.hoisted(() => {
   const nodes: FakeNode[] = [];
   class FakeNode {
     frequency = { rampTo: vi.fn() };
-    volume = { rampTo: vi.fn() };
+    volume = { value: 0, rampTo: vi.fn((target: number) => { this.volume.value = target; }) };
     pan = { rampTo: vi.fn() };
     triggerAttack = vi.fn();
     triggerAttackRelease = vi.fn();
     releaseAll = vi.fn();
     start = vi.fn();
-    mute = false;
     constructor(..._args: unknown[]) { nodes.push(this); }
     connect() { return this; }
     toDestination() { return this; }
   }
-  return { nodes, FakeNode, start: vi.fn(async () => {}) };
+  class FakeVolume extends FakeNode {
+    private unmutedVolume: number;
+    constructor(initial = 0) {
+      super();
+      this.unmutedVolume = initial;
+      this.volume.value = initial;
+    }
+    get mute() { return this.volume.value === -Infinity; }
+    set mute(on: boolean) {
+      if (!this.mute && on) {
+        this.unmutedVolume = this.volume.value;
+        this.volume.value = -Infinity;
+      } else if (this.mute && !on) {
+        this.volume.value = this.unmutedVolume;
+      }
+    }
+  }
+  return { nodes, FakeNode, FakeVolume, start: vi.fn(async () => {}) };
 });
 
 vi.mock("tone", () => ({
   start: tone.start,
-  Volume: tone.FakeNode, Reverb: tone.FakeNode, Filter: tone.FakeNode,
+  Volume: tone.FakeVolume, Reverb: tone.FakeNode, Filter: tone.FakeNode,
   PolySynth: tone.FakeNode, Synth: tone.FakeNode, FMSynth: tone.FakeNode,
   MonoSynth: tone.FakeNode, Noise: tone.FakeNode, Panner: tone.FakeNode,
 }));
@@ -91,6 +107,51 @@ describe("ToneScore", () => {
     const beforeHold = attacks();
     score.hold();
     expect(attacks()).toBe(beforeHold);
+    vi.useRealTimers();
+  });
+
+  it("keeps the shared bus muted through voice ducking and a new scan", async () => {
+    const score = new ToneScore();
+    await score.arm();
+    const bus = tone.nodes[0] as InstanceType<typeof tone.FakeVolume>;
+    score.mute(true);
+    score.voiceActive(true);
+    expect(bus.mute).toBe(true);
+    score.voiceActive(false);
+    expect(bus.mute).toBe(true);
+    score.idle();
+    expect(bus.mute).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it("unmutes to the current duck level after voice state changes while muted", async () => {
+    const score = new ToneScore();
+    await score.arm();
+    const bus = tone.nodes[0] as InstanceType<typeof tone.FakeVolume>;
+    score.mute(true);
+    score.voiceActive(true);
+    expect(bus.mute).toBe(true);
+    score.mute(false);
+    expect(bus.volume.value).toBe(-30);
+    score.voiceActive(false);
+    expect(bus.volume.value).toBe(-18);
+    vi.useRealTimers();
+  });
+
+  it("stays muted when arming finishes after phase and duck changes", async () => {
+    let finishStart!: () => void;
+    tone.start.mockImplementationOnce(() => new Promise<void>((resolve) => { finishStart = resolve; }));
+    const score = new ToneScore();
+    const arming = score.arm();
+    score.mute(true);
+    score.ledOn(1);
+    score.voiceActive(true);
+    finishStart();
+    await arming;
+    const bus = tone.nodes[0] as InstanceType<typeof tone.FakeVolume>;
+    expect(bus.mute).toBe(true);
+    score.mute(false);
+    expect(bus.volume.value).toBe(-30);
     vi.useRealTimers();
   });
 });
