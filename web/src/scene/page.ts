@@ -28,7 +28,7 @@ const fragmentShader = /* glsl */ `
   in vec2 vUv;
   out vec4 fragColor;
 
-  float ff(sampler2D t) { return textureLod(t, vUv, sharpLod).r / max(textureLod(t, vUv, blurLod).r, 0.02); }
+  float ff(sampler2D t) { return dot(textureLod(t, vUv, sharpLod).rgb, vec3(1.0 / 3.0)) / max(dot(textureLod(t, vUv, blurLod).rgb, vec3(1.0 / 3.0)), 0.02); }
 
   void main() {
     vec3 color = paper * texture(revealMap, vUv).r * exposure;

@@ -39,6 +39,7 @@ export class ThreeStage implements Stage {
   private readonly look = new THREE.Vector3();
   private readonly sky = NIGHT.clone();
   private moves: gsap.core.Animation[] = [];
+  private sceneGeneration = 0;
   private holdRequested = false;
   private sunHeld = false;
 
@@ -78,7 +79,9 @@ export class ThreeStage implements Stage {
   }
 
   async reveal(urls: DoneUrls): Promise<void> {
+    const generation = this.sceneGeneration;
     if (!this.page.shows(urls.reveal)) await this.page.load(urls);
+    if (generation !== this.sceneGeneration) return;
     const s = STAGE.sunriseSeconds;
     this.track(gsap.to(this.engine.frameGain, { gain: 1, duration: s }));
     this.track(gsap.to(this.sky, { r: DAWN.r, g: DAWN.g, b: DAWN.b, duration: s }));
@@ -105,6 +108,7 @@ export class ThreeStage implements Stage {
   renderOnce(dt?: number): void { this.engine.renderOnce(dt); }
 
   private reset(gain: number, turnSeconds: number): void {
+    this.sceneGeneration++;
     this.holdRequested = false;
     this.sunHeld = false;
     const running = this.moves;
