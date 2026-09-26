@@ -10,6 +10,7 @@ import { ScanFeed } from "./feed/scanFeed";
 import type { FeedEvent } from "./feed/types";
 import { DomStage } from "./scene/domStage";
 import { ThreeStage } from "./scene/threeStage";
+import { createPanelToggle } from "./dev/panelToggle";
 import { Director, type Stage } from "./show/director";
 import { bindKeys } from "./show/keys";
 import { DomOverlay } from "./ui/overlay";
@@ -38,17 +39,13 @@ const voice = new BrowserVoice();
 const director = new Director(stage, new DomOverlay(document.querySelector<HTMLElement>("#overlay")!), new HttpReader(), voice);
 const play = (e: FeedEvent) => director.handle(e);
 
-let panel: { destroy(): void } | null = null;
-async function toggleDevPanel(): Promise<void> {
-  if (panel) {
-    panel.destroy();
-    panel = null;
-    return;
-  }
-  if (!(stage instanceof ThreeStage)) return; // the CSS stage has nothing to tune
-  const { openDevPanel } = await import("./dev/devPanel");
-  panel = openDevPanel(stage);
-}
+const toggleDevPanel = createPanelToggle(
+  stage instanceof ThreeStage,
+  () => import("./dev/devPanel").then(({ openDevPanel }) => ({
+    open: () => openDevPanel(stage as ThreeStage),
+  })),
+  (error) => console.warn("Could not open the tuning panel:", error),
+);
 
 let replay: ReplayFeed | null = null;
 function startReplay(name: string): void {
