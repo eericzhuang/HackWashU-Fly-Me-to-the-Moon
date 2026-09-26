@@ -1,0 +1,42 @@
+{
+  "responses": [
+    {
+      "fullTextAnnotation": {
+        "text": "Meet me\non\n",
+        "pages": [
+          {
+            "blocks": [
+              {
+                "paragraphs": [
+                  {
+                    "words": [
+                      {
+                        "boundingBox": { "vertices": [{ "x": 45, "y": 165 }, { "x": 300, "y": 165 }, { "x": 300, "y": 255 }, { "x": 45, "y": 255 }] },
+                        "symbols": [{ "text": "M" }, { "text": "e" }, { "text": "e" }, { "text": "t" }],
+                        "confidence": 0.94
+                      },
+                      {
+                        "boundingBox": { "vertices": [{ "x": 340, "y": 190 }, { "x": 490, "y": 190 }, { "x": 490, "y": 255 }, { "y": 255 }] },
+                        "symbols": [{ "text": "m" }, { "text": "e" }],
+                        "confidence": 0.88
+                      }
+                    ]
+                  },
+                  {
+                    "words": [
+                      {
+                        "boundingBox": { "vertices": [{ "x": 548, "y": 190 }, { "x": 668, "y": 190 }, { "x": 668, "y": 255 }, { "x": 548, "y": 255 }] },
+                        "symbols": [{ "text": "o" }, { "text": "n" }],
+                        "confidence": 0.5
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
