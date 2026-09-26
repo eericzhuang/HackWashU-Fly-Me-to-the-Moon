@@ -4,6 +4,11 @@ Camera app (Night mode works); each photo is pulled over the USB cable into the 
   python -m terminator.phone                  # phone on USB, Arduino on USB
   python -m terminator.phone --min-on 8       # keep each LED on at least 8 s
   python -m terminator.phone --rotate cw      # rotate the final images upright
+  python -m terminator.phone --no-show        # no live window
+
+A window (terminator.viewer) animates the capture, then waits on "READY"; the presenter flips
+through the processing steps and the reveal with SPACE / arrows (a hint pulses when a page's
+--slide-second animation is done). explain.png is saved too.
 
 Paper crop and rotation default to rig.json (repo root), so a fixed setup needs no flags:
   {"roi": [x, y, w, h], "rotate": "ccw"}   roi in the first photo's pixels after shrinking to 2400 px
@@ -25,10 +30,13 @@ import time
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 
-from .align import assemble
+import cv2
+
+from .align import ROTATIONS, assemble
 from .capture import LedBoard
-from .reveal import DIRECTIONS, reveal_folder
+from .reveal import DIRECTIONS, load_gray, reveal_folder
 from .scan import OUT, publish, write_meta
+from .stages import compute, rows, sheet, unaligned
 
 PHOTO_SUFFIXES = {".heic", ".jpg", ".jpeg"}
 RIG = Path(__file__).resolve().parent.parent / "rig.json"
@@ -97,7 +105,7 @@ def to_png(src: Path, dst: Path) -> None:
 
 
 async def run(board, phone, min_on: float = 5.0, timeout: float = 60.0, roi=None, rotate: str | None = None,
-              method: str = "range") -> Path:
+              method: str = "range", view=None, slide: float = 4.5) -> Path:
     t0 = time.time()
     folder = OUT / datetime.now().strftime("scan_%Y%m%d_%H%M%S")
     raw = folder / "raw"
@@ -115,6 +123,8 @@ async def run(board, phone, min_on: float = 5.0, timeout: float = 60.0, roi=None
             board.light(k)
             lit = time.time()
             cue(k)
+            if view:
+                view.board(k, f"LED {k + 1} on: take photo {k + 1} now")
             print(f"[{time.time() - t0:5.1f}s] LED {k + 1} ({DIRECTIONS[k]}) on - take photo {k + 1} now")
             path = await phone.wait_new(known, timeout)
             known.add(path)
@@ -128,15 +138,32 @@ async def run(board, phone, min_on: float = 5.0, timeout: float = 60.0, roi=None
             write_meta(folder, meta)
             publish(folder, f"dir_{k}.png", "meta.json")
             print(f"[{time.time() - t0:5.1f}s]   got {PurePosixPath(path).name}")
+            if view:
+                preview = cv2.cvtColor(cv2.imread(str(folder / f"dir_{k}.png")), cv2.COLOR_BGR2RGB)
+                view.photos[k] = cv2.rotate(preview, ROTATIONS[rotate]) if rotate else preview
+                view.board(k, f"got photo {k + 1}")
     finally:
         board.off()
 
     print(f"[{time.time() - t0:5.1f}s] aligning and combining")
-    assemble(shots, folder, roi=roi, rotate=rotate)
-    reveal_folder(folder, method=method)
+    if view:
+        view.processing()
+    # Worker thread, so the window keeps repainting meanwhile.
+    await asyncio.to_thread(assemble, shots, folder, roi=roi, rotate=rotate)
+    await asyncio.to_thread(reveal_folder, folder, method=method)
     meta.update(status="done", seconds=round(time.time() - t0, 2))
     write_meta(folder, meta)
     publish(folder, *[f"dir_{k}.png" for k in range(4)], "reveal.png", "relief_raw.png", "meta.json")
+    print(f"[{time.time() - t0:5.1f}s] done")
+
+    # Explain the processing (after "done" is published, so the web UI/AI never wait on it):
+    # an animated scene per step in the window, and the same steps saved as explain.png.
+    imgs = [load_gray(folder / f"dir_{k}.png") for k in range(4)]
+    before = await asyncio.to_thread(unaligned, shots, roi, rotate) if roi else None
+    d = await asyncio.to_thread(compute, imgs, before)
+    await asyncio.to_thread(lambda: sheet(rows(d)).save(folder / "explain.png"))
+    if view:
+        await view.present(d, slide)
     return folder
 
 
@@ -144,7 +171,11 @@ async def amain(a: argparse.Namespace) -> Path:
     board = LedBoard(a.port)
     try:
         async with Phone() as phone:
-            return await run(board, phone, a.min_on, a.timeout, a.roi, a.rotate, a.method)
+            if not a.show:
+                return await run(board, phone, a.min_on, a.timeout, a.roi, a.rotate, a.method)
+            from .viewer import Viewer
+            async with Viewer() as view:
+                return await run(board, phone, a.min_on, a.timeout, a.roi, a.rotate, a.method, view, a.slide)
     finally:
         board.close()
 
@@ -158,6 +189,8 @@ def main() -> None:
                    help="crop to the paper, in the first photo's pixel coords after shrinking to 2400 px")
     p.add_argument("--rotate", choices=["cw", "ccw", "180"], default=None)
     p.add_argument("--method", choices=["range", "depth"], default="range")
+    p.add_argument("--no-show", dest="show", action="store_false", help="no live window")
+    p.add_argument("--slide", type=float, default=4.5, help="seconds per processing-step animation")
     a = p.parse_args()
     rig = json.loads(RIG.read_text()) if RIG.exists() else {}
     a.roi = a.roi or rig.get("roi")

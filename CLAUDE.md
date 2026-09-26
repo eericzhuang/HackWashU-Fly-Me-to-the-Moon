@@ -47,8 +47,13 @@ terminator/scan.py      full scan CLI, writes the contract above; --aim for setu
 terminator/reveal.py    4 images -> reveal.png (runs standalone on any scan folder)
 terminator/phone.py     phone scan: LEDs + chime cue, you tap the shutter (Night mode), photos pulled over USB
 terminator/align.py     ink-based photo registration (used by phone.py and tools/import_photos.py)
+terminator/stages.py    every reveal step as labeled image rows (English); checked against reveal()
+terminator/viewer.py    animated live window for phone.py (moon theme, Futura): capture, combine, then
+                        presenter-paced pages (SPACE/-> next, <- back, Q quit; a hint pulses when a
+                        page is done), terminator-wipe reveal. `python -m terminator.viewer <scan>` replays
 tools/simulate.py       synthetic scans for testing without hardware
 tools/import_photos.py  4 hand-taken phone photos (N,E,S,W) -> aligned scan folder + reveal
+tools/explain.py        one labeled PNG of every reveal step (for debugging and the pitch)
 ```
 
 ## Commands
@@ -56,12 +61,14 @@ tools/import_photos.py  4 hand-taken phone photos (N,E,S,W) -> aligned scan fold
 pip install -r requirements.txt
 python tools/simulate.py "Meet me on the moon at 9"   # -> out/sim/
 python -m terminator.reveal out/sim                   # -> out/sim/reveal.png
-python -m terminator.phone [--rotate cw] [--min-on 5]  # MAIN DEMO FLOW: iPhone + Arduino on USB
+python -m terminator.phone [--slide 4.5] [--no-show]   # MAIN DEMO FLOW: iPhone + Arduino on USB
+python -m terminator.viewer out/scan_20260926_005757  # replay a past scan's animation, no hardware
 python -m terminator.scan --aim                       # all LEDs on + live preview; r = pick ROI
 python -m terminator.scan [--port COM3] [--camera 1] [--roi X Y W H] [--rotate cw] [--settle 5]
 python -m terminator.scan --list-cameras              # snapshot each camera index -> out/cameras/
 python -m terminator.scan --manual [--camera 1]       # no Arduino: prompts you to move a flashlight
 python tools/import_photos.py out/test1               # -> out/test1_scan/ (aligns on ink first)
+python tools/explain.py out/latest                    # -> out/latest/explain.png
 ```
 
 ## Hardware
@@ -122,6 +129,8 @@ Tuning knobs are CLI flags: `--method --sigma --hp --smooth --lo --hi --clahe --
 - [x] First real terminator.phone scan (out/scan_20260926_005757, iPhone 16 Pro, JPG): "WASHU"
       readable after cropping to the paper and rotating ccw -> saved as rig.json. ~76 s shooting
       + ~17 s align/combine. The south shot had a long cable shadow (grazing light!).
+- [x] Live window (terminator.viewer) + explain.png per scan; dry-run with the real photos passes.
+      Slides start after status "done" is published, so the web UI is never held up by them.
 - [ ] Keep cables away from the paper; re-pick rig.json if the phone or paper moves; tune `--lo`
 - [ ] Optional: 3D relief view from the depth map (already computed in reveal.py)
 
