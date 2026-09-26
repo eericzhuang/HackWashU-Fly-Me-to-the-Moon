@@ -155,6 +155,7 @@ describe("Director", () => {
   });
 
   it("ends in hold and cancels the voice when speak never settles", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { director, stage, voice } = setup(OK);
     voice.speak.mockImplementation(() => new Promise<void>(() => {})); // never resolves
     capture(director);
@@ -165,6 +166,8 @@ describe("Director", () => {
     expect(director.phase).toBe("hold");
     expect(voice.cancel).toHaveBeenCalled();
     expect(stage.hold).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith("voice.speak timed out after 7000 ms");
+    warn.mockRestore();
   });
 
   it("ends in hold and logs the error when a stage step rejects", async () => {
