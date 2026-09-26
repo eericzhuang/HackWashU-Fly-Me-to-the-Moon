@@ -2,7 +2,7 @@
 
 Branch `ui`. Last updated 2026-09-26.
 Spec: `docs/superpowers/specs/2026-09-26-web-ui-design.md`
-Plans: `docs/superpowers/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/superpowers/plans/2026-09-26-web-ui-L1-light-and-3d.md`, `docs/superpowers/plans/2026-09-26-web-ui-L2-sound-and-voice.md` (draft for review)
+Plans: `docs/superpowers/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/superpowers/plans/2026-09-26-web-ui-L1-light-and-3d.md`, `docs/superpowers/plans/2026-09-26-web-ui-L2-sound-and-voice.md` (local sound; in progress)
 
 ## Done
 - **L0 skeleton (all 10 tasks, final review passed):**
@@ -23,7 +23,7 @@ Plans: `docs/superpowers/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/superpow
 - None in code. A real color scan and GPU inspection remain on the demo-machine rehearsal checklist.
 
 ## Later layers
-- [ ] Sound and Cloud TTS: plan drafted for review; Tone.js chord walk, Quindar tones, Cloud TTS radio voice. Enable **Cloud Text-to-Speech** on the Google project before the real API check. Try the existing server-side key first; browser speech remains the fallback.
+- [ ] Local sound: Tone.js chord walk, Quindar tones, and the existing browser speech. User chose no TTS API; browser word timing uses boundary events or estimates.
 - [ ] Paper-terrain descent: the moon surface morphing into the page's relief
 - [ ] Easter eggs: handwriting melody, ghost pen
 
