@@ -14,3 +14,8 @@ web/node_modules/
 web/dist/
 web/.cache/
 web/.env.local
+
+# demo recordings and their script (local only)
+*.mov
+*.mp4
+TERMINATOR DEMO script.md
