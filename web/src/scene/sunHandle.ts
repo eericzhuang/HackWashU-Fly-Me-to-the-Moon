@@ -48,4 +48,7 @@ export class SunHandle {
     }
     return v;
   }
+  angles(): { azimuth: number; elevation: number } {
+    return { azimuth: this.follower.azimuth, elevation: this.follower.elevation };
+  }
 }

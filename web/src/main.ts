@@ -5,6 +5,10 @@ import "@fontsource/jost/600.css";
 import "@fontsource/jetbrains-mono/400.css";
 import { HttpReader } from "./ai/reader";
 import { BrowserVoice } from "./audio/voice";
+import { ToneScore } from "./audio/score";
+import { Quindar } from "./audio/quindar";
+import { CueVoice } from "./audio/cueVoice";
+import { audioKeyActions } from "./audio/controls";
 import { ReplayFeed } from "./feed/replayFeed";
 import { ScanFeed } from "./feed/scanFeed";
 import type { FeedEvent } from "./feed/types";
@@ -23,11 +27,14 @@ const params = new URLSearchParams(location.search);
 const replayName = params.get("replay");
 const pace = Number(params.get("pace")) || 6000;
 const stageRoot = document.querySelector<HTMLElement>("#stage")!;
+const sound = new ToneScore();
+const voice = new CueVoice(new BrowserVoice(), new Quindar());
 
 async function makeStage(): Promise<Stage> {
   if (params.get("stage") === "dom") return new DomStage(stageRoot);
   try {
-    return await ThreeStage.create(document.querySelector<HTMLElement>("#gl")!, stageRoot);
+    return await ThreeStage.create(document.querySelector<HTMLElement>("#gl")!, stageRoot,
+      (azimuth, elevation) => sound.heldSun(azimuth, elevation));
   } catch (e) {
     console.warn("3D stage unavailable, using the CSS stage:", e);
     return new DomStage(stageRoot);
@@ -35,8 +42,8 @@ async function makeStage(): Promise<Stage> {
 }
 
 const stage = await makeStage();
-const voice = new BrowserVoice();
-const director = new Director(stage, new DomOverlay(document.querySelector<HTMLElement>("#overlay")!), new HttpReader(), voice);
+const director = new Director(stage, new DomOverlay(document.querySelector<HTMLElement>("#overlay")!), new HttpReader(), voice, sound);
+const audioActions = audioKeyActions(director, sound, voice);
 const play = (e: FeedEvent) => director.handle(e);
 
 const toggleDevPanel = createPanelToggle(
@@ -62,7 +69,7 @@ live?.start((e) => {
 if (replayName) startReplay(replayName);
 
 bindKeys(window, {
-  arm: () => director.arm(),
+  arm: audioActions.arm,
   skip: () => director.skip(),
   // In replay mode R always restarts the replay; live, R must never jump into a running
   // capture or replay a folder that isn't finished yet.
@@ -74,9 +81,7 @@ bindKeys(window, {
     replay?.stop();
     director.toIdle();
   },
-  mute: () => {
-    voice.muted = !voice.muted;
-  },
+  mute: audioActions.mute,
   fullscreen: () => {
     const p = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
     void p.catch(() => {}); // a rejected request (e.g. no user gesture) must not become an unhandled rejection

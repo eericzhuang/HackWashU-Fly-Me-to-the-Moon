@@ -2,7 +2,7 @@
 
 Branch `ui`. Last updated 2026-09-26.
 Spec: `docs/superpowers/specs/2026-09-26-web-ui-design.md`
-Plans: `docs/superpowers/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/superpowers/plans/2026-09-26-web-ui-L1-light-and-3d.md`, `docs/superpowers/plans/2026-09-26-web-ui-L2-sound-and-voice.md` (local sound; in progress)
+Plans: `docs/superpowers/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/superpowers/plans/2026-09-26-web-ui-L1-light-and-3d.md`, `docs/superpowers/plans/2026-09-26-web-ui-L2-sound-and-voice.md` (local sound)
 
 ## Done
 - **L0 skeleton (all 10 tasks, final review passed):**
@@ -18,12 +18,14 @@ Plans: `docs/superpowers/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/superpow
 - **L1 task 8:** D-key tuning panel for the moon, bloom, capture dim, and page relighting.
 - **L1 task 9:** documentation updated (`CLAUDE.md` layout/commands/status, spec §8 layer-order note, and this status list).
 - **L1 final review:** passed after fixing stale reveal loads that could brighten a new scan and RGB relighting for green/blue LEDs. The targeted re-review found no new issues.
+- **L2 local sound:** Tone.js chord walk, photo pings, Quindar cues and shared M mute connect to both stages.
+  The first key or pointer gesture arms audio; held-sun motion controls pan and filter in 3D. Spoken reveal
+  and 1202 remain on browser speech, with boundary events or estimated word timing. No Cloud TTS setup is needed.
 
 ## Remaining L1 work
 - None in code. A real color scan and GPU inspection remain on the demo-machine rehearsal checklist.
 
 ## Later layers
-- [ ] Local sound: Tone.js chord walk, Quindar tones, and the existing browser speech. User chose no TTS API; browser word timing uses boundary events or estimates.
 - [ ] Paper-terrain descent: the moon surface morphing into the page's relief
 - [ ] Easter eggs: handwriting melody, ghost pen
 
@@ -34,6 +36,8 @@ Plans: `docs/superpowers/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/superpow
 
 ## Rehearsal checklist
 - [ ] Full real scan on the Mac: frame rate, M (mute) and F (fullscreen) keys
+- [ ] Check score, Quindar and browser voice on the demo Mac speakers; set levels below hardware instructions
+- [ ] Check browser voice quality and word boundary timing in the demo browser
 - [ ] Screen-brightness A/B test (screen black vs UI on during capture); tune `STAGE.captureDim` (0.45)
 - [ ] Real OCR time on a real scan's reveal.png vs the 8 s deadline
 - [ ] Check the relit page with a real color phone scan, especially green and blue LED shots

@@ -203,7 +203,7 @@ describe("Director", () => {
   });
 
   it("Esc goes back to idle and stops the voice", () => {
-    const { director, stage, overlay, voice } = setup(OK);
+    const { director, stage, overlay, voice, sound } = setup(OK);
     capture(director);
     director.arm();
     director.toIdle();
@@ -211,6 +211,24 @@ describe("Director", () => {
     expect(stage.idle).toHaveBeenCalledTimes(2);
     expect(overlay.idle).toHaveBeenLastCalledWith(true);
     expect(voice.cancel).toHaveBeenCalled();
+    expect(sound.idle).toHaveBeenCalledTimes(3);
+    expect(voice.cancel.mock.invocationCallOrder.at(-1)!).toBeLessThan(sound.idle.mock.invocationCallOrder.at(-1)!);
+  });
+
+  it("cancels an old reading and idles sound before the next LED chord", async () => {
+    const { director, voice, sound } = setup(OK);
+    capture(director);
+    director.handle(DONE);
+    await vi.advanceTimersByTimeAsync(1600);
+
+    director.handle({ type: "scanStarted", scanId: "t2" });
+    director.handle({ type: "ledOn", led: 0 });
+
+    const cancel = voice.cancel.mock.invocationCallOrder.at(-1)!;
+    const idle = sound.idle.mock.invocationCallOrder.at(-1)!;
+    const chord = sound.ledOn.mock.invocationCallOrder.at(-1)!;
+    expect(cancel).toBeLessThan(idle);
+    expect(idle).toBeLessThan(chord);
   });
 
   it("skip is passed to the stage", () => {

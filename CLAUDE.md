@@ -59,6 +59,7 @@ web/                    web UI (Vite + TS), the audience-facing show. Only reads
                         POST /api/read (Google Vision; key in web/.env.local, never in the browser)
   src/feed/             meta.json -> show events (ScanFeed live, ReplayFeed for dev/backup demo)
   src/show/director.ts  the show's state machine; Stage/Overlay/Voice are swappable (L0 = DOM/CSS)
+  src/audio/          local Tone.js chord score and Quindar cues; browser speech with word timing
   src/scene/threeStage.ts  3D stage (three.js): NASA moon lit from the LED's side, real stars, photo cards,
                         dive + sunrise, page relit by a sun you can hold; ?stage=dom = CSS fallback
   public/sky/           moon/star assets (NASA SVS CGI Moon Kit, Yale BSC); tools/prepare_moon_assets.py
@@ -81,9 +82,15 @@ cd web && npm ci                                      # once (Node >= 22.12 for 
 cd web && npm run dev                                 # http://localhost:5173 watches out/latest
 #   ?stage=dom  the CSS stand-in stage;  D = tuning panel (moon relief, bloom, capture dim, page relight)
 #   http://localhost:5173/?replay=sim&pace=2500       plays out/sim as if live (no hardware)
+#   first key or click arms local audio; M toggles score, Quindar and browser speech
+#   R replays, Esc idles, F toggles fullscreen; ?stage=dom uses the same audio
 cd web && npm test                                    # unit tests
 cd web && npm run demo                                # build + serve for the demo machine
 ```
+
+The score and radio cue tones run locally after the first gesture. Spoken reveal and 1202 use
+the browser's speech synthesis; no TTS API is needed. Word highlighting uses speech boundary
+events when available and estimated timing otherwise, so voice quality and timing vary by browser.
 
 ## Hardware
 - RedBoard/Uno, 4 LEDs (same color; green best: half the phone's Bayer pixels are green,
@@ -147,6 +154,8 @@ Tuning knobs are CLI flags: `--method --sigma --hp --smooth --lo --hi --clahe --
       Slides start after status "done" is published, so the web UI is never held up by them.
 - [x] Web UI L0 (branch ui): live/replay feeds, Director, CSS stand-in visuals, Vision OCR (real key checked on out/sim: 7 words, conf 0.99, 0.6 s), browser speech, 1202 alarm
 - [x] Web UI L1 visuals (branch ui): three.js moon/stars/cards/page, hold-the-sun relighting, tuning panel
+- [x] Web UI L2 local sound (branch ui): gesture-armed chord walk, photo pings, Quindar around browser speech,
+      shared M mute, held-sun pan/filter; speaker level and voice timing still need demo-Mac rehearsal
 - [ ] Keep cables away from the paper; re-pick rig.json if the phone or paper moves; tune `--lo`
 - [ ] Optional: 3D relief view from the depth map (already computed in reveal.py)
 

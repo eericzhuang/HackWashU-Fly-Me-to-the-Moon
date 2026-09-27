@@ -24,10 +24,10 @@ const DIVE_LED = 3;
 
 /** The three.js picture: moon, sky, photos, a sunrise onto the page and a sun you can hold over it. */
 export class ThreeStage implements Stage {
-  static async create(glRoot: HTMLElement, domRoot: HTMLElement): Promise<ThreeStage> {
+  static async create(glRoot: HTMLElement, domRoot: HTMLElement, onHeldSun?: (azimuth: number, elevation: number) => void): Promise<ThreeStage> {
     const engine = new Engine(glRoot);
     const assets = await loadSkyAssets(engine.renderer.capabilities.getMaxAnisotropy());
-    return new ThreeStage(engine, assets, domRoot);
+    return new ThreeStage(engine, assets, domRoot, onHeldSun);
   }
 
   readonly engine: Engine;
@@ -43,7 +43,7 @@ export class ThreeStage implements Stage {
   private holdRequested = false;
   private sunHeld = false;
 
-  private constructor(engine: Engine, assets: SkyAssets, domRoot: HTMLElement) {
+  private constructor(engine: Engine, assets: SkyAssets, domRoot: HTMLElement, onHeldSun?: (azimuth: number, elevation: number) => void) {
     this.engine = engine;
     this.moon = new Moon(assets);
     this.stars = new Stars(assets.stars);
@@ -60,6 +60,10 @@ export class ThreeStage implements Stage {
       const r = this.page.layout(engine.camera, innerWidth, innerHeight);
       this.sunHandle.setArea(r.left + r.width / 2, r.top + r.height / 2, 0.5 * Math.max(r.width, r.height));
       this.page.setSun(this.sunHandle.update(f.dt));
+      if (this.sunHeld) {
+        const { azimuth, elevation } = this.sunHandle.angles();
+        onHeldSun?.(azimuth, elevation);
+      }
     });
   }
 
