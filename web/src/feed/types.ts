@@ -1,3 +1,5 @@
+import type { ReviewInfo } from "../../shared/types";
+
 export type Phase = "capture" | "combining" | "done";
 
 /** What one meta.json says, in the show's terms. */
@@ -7,11 +9,19 @@ export interface ScanState {
   phase: Phase;
   activeLed: number | null; // the LED lit right now (capture only)
   captured: number[];
+  review?: ReviewInfo; // an open alignment review (capturing only)
+  steps?: string; // steps.json, once done
 }
 
 export interface DoneUrls {
   dirs: string[];
   reveal: string;
+  steps?: string; // steps.json, when the scan has step pages
+}
+
+export interface ReviewUrls {
+  ref: string;
+  options: string[];
 }
 
 export type FeedEvent =
@@ -19,6 +29,8 @@ export type FeedEvent =
   | { type: "ledOn"; led: number }
   | { type: "photoLanded"; led: number; url: string }
   | { type: "combining" }
+  | { type: "review"; name: string; review: ReviewInfo; urls: ReviewUrls }
+  | { type: "reviewDone" }
   | { type: "done"; name: string; urls: DoneUrls };
 
 /** A source of show events: the live scan folder, or a replay of a finished one. */

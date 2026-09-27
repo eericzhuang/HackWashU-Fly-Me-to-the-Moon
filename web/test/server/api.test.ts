@@ -93,3 +93,33 @@ describe("POST /api/read", () => {
     expect((await res.json()).error).toMatch(/GOOGLE_API_KEY/);
   });
 });
+
+describe("POST /api/review", () => {
+  const post = (base: string, body: unknown) =>
+    fetch(`${base}/api/review`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+  it("writes the answer where terminator.review looks for it", async () => {
+    const outDir = outWithSim();
+    const middleware = createApiMiddleware({ outDir, cacheDir: join(outDir, ".cache"), apiKey: "k" });
+    const s = createServer((req, res) => void middleware(req, res, () => res.end("fallthrough")));
+    server = s;
+    await new Promise<void>((resolve) => s.listen(0, "127.0.0.1", resolve));
+    const base = `http://127.0.0.1:${(s.address() as AddressInfo).port}`;
+    const res = await post(base, { scan: "sim", id: "ab12", choice: 1, dx: -3, dy: 10 });
+    expect(res.status).toBe(200);
+    expect(JSON.parse(readFileSync(join(outDir, "sim", "review_answer.json"), "utf8"))).toEqual({ id: "ab12", choice: 1, dx: -3, dy: 10 });
+  });
+
+  it("rejects bad input", async () => {
+    const base = await start();
+    for (const body of [
+      { scan: "../x", id: "ab12", choice: 0, dx: 0, dy: 0 },
+      { scan: "sim", id: "AB/..", choice: 0, dx: 0, dy: 0 },
+      { scan: "sim", id: "ab12", choice: -1, dx: 0, dy: 0 },
+      { scan: "sim", id: "ab12", choice: 0.5, dx: 0, dy: 0 },
+      { scan: "sim", id: "ab12", choice: 0, dx: 1e9, dy: 0 },
+    ]) {
+      expect((await post(base, body)).status).toBe(400);
+    }
+  });
+});

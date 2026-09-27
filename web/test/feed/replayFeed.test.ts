@@ -19,7 +19,11 @@ describe("replayTimeline", () => {
     expect(t[10].event).toEqual({
       type: "done",
       name: "sim",
-      urls: { dirs: [0, 1, 2, 3].map((k) => `/scan/sim/dir_${k}.png?v=r1-${k}`), reveal: "/scan/sim/reveal.png?v=r1-reveal" },
+      urls: {
+        dirs: [0, 1, 2, 3].map((k) => `/scan/sim/dir_${k}.png?v=r1-${k}`),
+        reveal: "/scan/sim/reveal.png?v=r1-reveal",
+        steps: "/scan/sim/steps.json?v=r1-steps", // a folder without step pages just skips them
+      },
     });
   });
 });

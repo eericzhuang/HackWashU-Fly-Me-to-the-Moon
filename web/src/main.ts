@@ -18,11 +18,13 @@ import { createPanelToggle } from "./dev/panelToggle";
 import { Director, type Stage } from "./show/director";
 import { bindKeys } from "./show/keys";
 import { DomOverlay } from "./ui/overlay";
+import { Panels } from "./ui/panels";
 
 // URL options:
 //   ?replay=sim&pace=6000   play a finished scan folder as if live (development, or the backup demo)
 //   ?scan=latest            which folder the live feed watches (default: latest)
 //   ?stage=dom              the CSS stand-in instead of three.js (weak GPU, or no WebGL)
+//   ?steps=off              skip the step-by-step pages after a scan (straight to the reveal)
 const params = new URLSearchParams(location.search);
 const replayName = params.get("replay");
 const pace = Number(params.get("pace")) || 6000;
@@ -42,7 +44,9 @@ async function makeStage(): Promise<Stage> {
 }
 
 const stage = await makeStage();
-const director = new Director(stage, new DomOverlay(document.querySelector<HTMLElement>("#overlay")!), new HttpReader(), voice, sound);
+const panels = new Panels(document.querySelector<HTMLElement>("#panels")!, params.get("steps") !== "off");
+const director = new Director(stage, new DomOverlay(document.querySelector<HTMLElement>("#overlay")!), new HttpReader(),
+  voice, sound, panels);
 const audioActions = audioKeyActions(director, sound, voice);
 const play = (e: FeedEvent) => director.handle(e);
 
@@ -87,6 +91,7 @@ bindKeys(window, {
     void p.catch(() => {}); // a rejected request (e.g. no user gesture) must not become an unhandled rejection
   },
   dev: () => void toggleDevPanel(),
+  panel: (key, shift) => director.key(key, shift),
 });
 
 // Dev builds: a handle for checks in the browser console (e.g. __terminator.stage.renderOnce()).

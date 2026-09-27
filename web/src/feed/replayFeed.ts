@@ -20,7 +20,11 @@ export function replayTimeline(name: string, scanId: string, paceMs: number, com
   }
   out.push({
     at: 4 * paceMs + combineMs,
-    event: { type: "done", name, urls: { dirs, reveal: scanUrl(name, "reveal.png", `${scanId}-reveal`) } },
+    event: {
+      type: "done",
+      name,
+      urls: { dirs, reveal: scanUrl(name, "reveal.png", `${scanId}-reveal`), steps: scanUrl(name, "steps.json", `${scanId}-steps`) },
+    },
   });
   return out;
 }

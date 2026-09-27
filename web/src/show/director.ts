@@ -2,7 +2,7 @@ import type { Word } from "../../shared/types";
 import type { Outcome } from "../ai/classify";
 import type { DoneUrls, FeedEvent } from "../feed/types";
 
-export type ShowPhase = "idle" | "capture" | "combining" | "descent" | "reveal" | "hold";
+export type ShowPhase = "idle" | "capture" | "combining" | "review" | "steps" | "descent" | "reveal" | "hold";
 
 /** The picture. L0: DomStage (CSS). L1 swaps in the three.js scene behind this same interface. */
 export interface Stage {
@@ -36,6 +36,24 @@ export interface Overlay {
   alarm(on: boolean): void;
   waiting(on: boolean): void;
 }
+
+/** Full-screen HTML panels over the stage: the alignment review and the step-by-step pages. */
+export interface Screens {
+  review(e: Extract<FeedEvent, { type: "review" }>): void;
+  closeReview(): void;
+  /** Presenter-paced pages; resolves when they leave the last one (at once if there are none). */
+  steps(url: string): Promise<void>;
+  closeSteps(): void;
+  /** A key the show doesn't use itself (arrows, Enter, digits). true = a panel took it. */
+  key(key: string, shift: boolean): boolean;
+  /** Space. true = a panel took it (next page / fast-forward). */
+  skip(): boolean;
+}
+
+const NO_SCREENS: Screens = {
+  review: () => {}, closeReview: () => {}, steps: async () => {}, closeSteps: () => {},
+  key: () => false, skip: () => false,
+};
 
 export interface Reader {
   /** Never rejects. */
@@ -109,13 +127,16 @@ export class Director {
   private readonly reader: Reader;
   private readonly voice: Voice;
   private readonly sound: Soundtrack;
+  private readonly screens: Screens;
 
-  constructor(stage: Stage, overlay: Overlay, reader: Reader, voice: Voice, sound: Soundtrack = SILENT_SOUND) {
+  constructor(stage: Stage, overlay: Overlay, reader: Reader, voice: Voice, sound: Soundtrack = SILENT_SOUND,
+              screens: Screens = NO_SCREENS) {
     this.stage = stage;
     this.overlay = overlay;
     this.reader = reader;
     this.voice = voice;
     this.sound = sound;
+    this.screens = screens;
     stage.idle();
     sound.idle();
     overlay.idle(false);
@@ -148,7 +169,17 @@ export class Director {
         this.sound.combining();
         this.overlay.combining();
         break;
+      case "review":
+        this.phase = "review";
+        this.clearStuck();
+        this.screens.review(e);
+        break;
+      case "reviewDone":
+        this.screens.closeReview();
+        if (this.phase === "review") this.phase = "combining";
+        break;
       case "done":
+        this.screens.closeReview();
         void this.finish(e.name, e.urls);
         break;
     }
@@ -170,7 +201,13 @@ export class Director {
   }
 
   skip(): void {
+    if (this.screens.skip()) return;
     this.stage.skip();
+  }
+
+  /** Arrows, Enter, digits: only the panels use them. */
+  key(key: string, shift: boolean): void {
+    this.screens.key(key, shift);
   }
 
   private restart(phase: ShowPhase): void {
@@ -184,6 +221,8 @@ export class Director {
     this.overlay.alarm(false);
     this.overlay.subtitle([], null);
     this.overlay.clearCue();
+    this.screens.closeReview();
+    this.screens.closeSteps();
   }
 
   private async finish(scan: string, urls: DoneUrls): Promise<void> {
@@ -191,11 +230,19 @@ export class Director {
     const live = () => gen === this.gen;
     try {
       this.clearStuck();
+      // Ask for the reading now, so it is there when the pages and the descent are over.
+      const reading = Promise.race([this.reader.read(scan), sleep(TIMING.readDeadlineMs).then(() => NO_RESULT)]);
+      if (urls.steps) {
+        // The presenter walks through every processing step first (no time limit: they page it).
+        this.phase = "steps";
+        this.overlay.clearCue();
+        await this.screens.steps(urls.steps);
+        if (!live()) return;
+        this.screens.closeSteps();
+      }
       this.overlay.reveal();
       this.phase = "descent";
       this.sound.descent();
-      // Ask for the reading now, so it arrives while the descent plays.
-      const reading = Promise.race([this.reader.read(scan), sleep(TIMING.readDeadlineMs).then(() => NO_RESULT)]);
       await bounded(this.stage.descent(urls), TIMING.stepMaxMs, "stage.descent");
       if (!live()) return;
       this.phase = "reveal";
@@ -205,44 +252,7 @@ export class Director {
       const outcome = await reading;
       if (!live()) return;
 
-      this.stage.showWords(outcome.words, outcome.confident);
-      if (outcome.kind === "ok") {
-        const texts = outcome.words.map((w) => w.text);
-        this.overlay.subtitle(texts, null);
-        const speakMaxMs = texts.length * TIMING.speakPerWordMs + TIMING.speakSlackMs;
-        this.sound.voiceActive(true);
-        let spoke: true | undefined;
-        try {
-          spoke = await bounded(
-            this.voice
-              .speak(texts, (i) => {
-                if (!live()) return;
-                this.stage.highlight(i);
-                this.overlay.subtitle(texts, i);
-              })
-              .then(() => true),
-            speakMaxMs,
-            "voice.speak",
-          );
-        } finally {
-          if (live()) this.sound.voiceActive(false);
-        }
-        if (!live()) return;
-        if (spoke === undefined) this.voice.cancel();
-        this.stage.highlight(texts.length);
-        this.overlay.subtitle(texts, texts.length);
-      } else {
-        this.overlay.alarm(true);
-        this.sound.voiceActive(true);
-        let alarmed: true | undefined;
-        try {
-          alarmed = await bounded(this.voice.alarm().then(() => true), TIMING.alarmMaxMs, "voice.alarm");
-        } finally {
-          if (live()) this.sound.voiceActive(false);
-        }
-        if (!live()) return;
-        if (alarmed === undefined) this.voice.cancel();
-      }
+      if (!(await this.present(outcome, live))) return;
       await sleep(TIMING.holdAfterMs);
       if (!live()) return;
       this.phase = "hold";
@@ -260,6 +270,49 @@ export class Director {
         }
       }
     }
+  }
+
+  /** Word boxes, subtitle and voice for one reading (or the 1202 alarm). false = a newer run took over. */
+  private async present(outcome: Outcome, live: () => boolean): Promise<boolean> {
+    this.stage.showWords(outcome.words, outcome.confident);
+    if (outcome.kind === "ok") {
+      const texts = outcome.words.map((w) => w.text);
+      this.overlay.subtitle(texts, null);
+      const speakMaxMs = texts.length * TIMING.speakPerWordMs + TIMING.speakSlackMs;
+      this.sound.voiceActive(true);
+      let spoke: true | undefined;
+      try {
+        spoke = await bounded(
+          this.voice
+            .speak(texts, (i) => {
+              if (!live()) return;
+              this.stage.highlight(i);
+              this.overlay.subtitle(texts, i);
+            })
+            .then(() => true),
+          speakMaxMs,
+          "voice.speak",
+        );
+      } finally {
+        if (live()) this.sound.voiceActive(false);
+      }
+      if (!live()) return false;
+      if (spoke === undefined) this.voice.cancel();
+      this.stage.highlight(texts.length);
+      this.overlay.subtitle(texts, texts.length);
+    } else {
+      this.overlay.alarm(true);
+      this.sound.voiceActive(true);
+      let alarmed: true | undefined;
+      try {
+        alarmed = await bounded(this.voice.alarm().then(() => true), TIMING.alarmMaxMs, "voice.alarm");
+      } finally {
+        if (live()) this.sound.voiceActive(false);
+      }
+      if (!live()) return false;
+      if (alarmed === undefined) this.voice.cancel();
+    }
+    return true;
   }
 
   private watchStuck(): void {

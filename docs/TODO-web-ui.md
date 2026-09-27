@@ -30,8 +30,11 @@ Plans: `docs/superpowers/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/superpow
 - [ ] Easter eggs: handwriting melody, ghost pen
 
 ## Coordinate with Eric (spec §11)
-- [ ] Screen: web UI runs the show; run `python -m terminator.phone --no-show`; his viewer handles the tech deep-dive
-- [ ] phone.py plays a chime and `say` at every LED, which clashes with our music: add a `--quiet` flag, or keep it
+- [x] Screen: the web UI is the only screen; Eric's viewer is gone, its step pages now live in src/ui/panels.ts
+      (shown after "done", before the reveal; ?steps=off skips them)
+- [x] phone.py `--quiet` skips the chime and `say`
+- [x] New in the contract (CLAUDE.md): meta.review + review_*.png + POST /api/review (alignment review panel),
+      meta.steps + steps.json + step_*.png (step pages), meta.alignment/method
 - [ ] Install Node on the demo Mac, then `cd web && npm ci && npm run demo`
 
 ## Rehearsal checklist

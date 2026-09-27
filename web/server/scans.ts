@@ -16,9 +16,12 @@ export const SCAN_FILES = new Set([
   "relief_raw.png",
 ]);
 
+/** Step pages (terminator.stages) and alignment-review images (terminator.review). */
+export const SCAN_EXTRA = /^(steps\.json|step_\d{1,2}_\d\.png|review_ref\.png|review_\d\.png)$/;
+
 /** Absolute path of out/<name>/<file>, or null if the folder or file is not allowed. */
 export function resolveScanFile(outDir: string, name: string, file: string): string | null {
-  if (!SCAN_NAME.test(name) || !SCAN_FILES.has(file)) return null;
+  if (!SCAN_NAME.test(name) || !(SCAN_FILES.has(file) || SCAN_EXTRA.test(file))) return null;
   return join(outDir, name, file);
 }
 

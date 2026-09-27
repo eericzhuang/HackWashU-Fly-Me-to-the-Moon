@@ -5,6 +5,12 @@ import { describe, expect, it } from "vitest";
 import { listScans, resolveScanFile } from "../../server/scans";
 
 describe("resolveScanFile", () => {
+  it("allows step pages and alignment-review images", () => {
+    for (const f of ["steps.json", "step_0_0.png", "step_12_3.png", "review_ref.png", "review_4.png"]) {
+      expect(resolveScanFile("/o", "latest", f)).toBe(join("/o", "latest", f));
+    }
+  });
+
   it("allows contract files in known scan folders", () => {
     expect(resolveScanFile("/o", "latest", "meta.json")).toBe(join("/o", "latest", "meta.json"));
     expect(resolveScanFile("/o", "sim", "reveal.png")).toBe(join("/o", "sim", "reveal.png"));
@@ -19,6 +25,8 @@ describe("resolveScanFile", () => {
     expect(resolveScanFile("/o", "latest", "../rig.json")).toBeNull();
     expect(resolveScanFile("/o", "latest", "raw")).toBeNull();
     expect(resolveScanFile("/o", "latest", "explain.png")).toBeNull();
+    expect(resolveScanFile("/o", "latest", "review_answer.json")).toBeNull(); // write-only
+    expect(resolveScanFile("/o", "latest", "step_0_0.png.tmp")).toBeNull();
   });
 });
 

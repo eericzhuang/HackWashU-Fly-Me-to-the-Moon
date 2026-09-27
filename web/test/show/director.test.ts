@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Word } from "../../shared/types";
 import type { Outcome } from "../../src/ai/classify";
 import type { FeedEvent } from "../../src/feed/types";
-import { Director, sleep, TIMING, type Overlay, type Reader, type Soundtrack, type Stage, type Voice } from "../../src/show/director";
+import { Director, sleep, TIMING, type Overlay, type Reader, type Screens, type Soundtrack, type Stage, type Voice } from "../../src/show/director";
 
 const words: Word[] = [
   { text: "Meet", box: [], confidence: 0.9 },
@@ -265,5 +265,72 @@ describe("Director", () => {
     expect(director.phase).toBe("hold");
     expect(stage.hold).toHaveBeenCalledTimes(1);
     errorSpy.mockRestore();
+  });
+});
+
+describe("step pages and alignment review", () => {
+  function withScreens() {
+    const base = setup(OK);
+    let leave: () => void = () => {};
+    const screens = {
+      review: vi.fn(), closeReview: vi.fn(),
+      steps: vi.fn(() => new Promise<void>((resolve) => (leave = resolve))), closeSteps: vi.fn(),
+      key: vi.fn(() => true), skip: vi.fn(() => true),
+    } satisfies Screens;
+    const director = new Director(base.stage, base.overlay, base.reader, base.voice, base.sound, screens);
+    return { ...base, director, screens, leave: () => leave() };
+  }
+
+  it("waits on the presenter's pages before the descent, reading already asked for", async () => {
+    const t = withScreens();
+    capture(t.director);
+    t.director.handle({ ...DONE, urls: { ...DONE.urls, steps: "/scan/sim/steps.json?v=x" } });
+    await vi.advanceTimersByTimeAsync(60_000); // the presenter takes their time
+    expect(t.director.phase).toBe("steps");
+    expect(t.screens.steps).toHaveBeenCalledWith("/scan/sim/steps.json?v=x");
+    expect(t.reader.read).toHaveBeenCalledTimes(1);
+    expect(t.stage.descent).not.toHaveBeenCalled();
+    t.leave();
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(t.screens.closeSteps).toHaveBeenCalled();
+    expect(t.stage.descent).toHaveBeenCalled();
+    expect(t.voice.speak).toHaveBeenCalled();
+  });
+
+  it("no steps URL: straight to the descent", async () => {
+    const t = withScreens();
+    capture(t.director);
+    t.director.handle(DONE);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(t.screens.steps).not.toHaveBeenCalled();
+    expect(t.director.phase).toBe("descent");
+  });
+
+  it("a review opens over the combining scene and closes again", () => {
+    const t = withScreens();
+    capture(t.director);
+    const review = { id: "ab", led: 1, check: "unverified", detail: "", options: [], ref: "r", ai: null, timeout: 90 };
+    t.director.handle({ type: "review", name: "latest", review, urls: { ref: "r", options: [] } });
+    expect(t.director.phase).toBe("review");
+    expect(t.screens.review).toHaveBeenCalled();
+    t.director.key("2", false);
+    expect(t.screens.key).toHaveBeenCalledWith("2", false);
+    t.director.handle({ type: "reviewDone" });
+    expect(t.screens.closeReview).toHaveBeenCalled();
+    expect(t.director.phase).toBe("combining");
+  });
+
+  it("Space goes to an open panel instead of the stage", () => {
+    const t = withScreens();
+    t.director.skip();
+    expect(t.screens.skip).toHaveBeenCalled();
+    expect(t.stage.skip).not.toHaveBeenCalled();
+  });
+
+  it("a new scan closes both panels", () => {
+    const t = withScreens();
+    t.director.handle({ type: "scanStarted", scanId: "t2" });
+    expect(t.screens.closeReview).toHaveBeenCalled();
+    expect(t.screens.closeSteps).toHaveBeenCalled();
   });
 });
