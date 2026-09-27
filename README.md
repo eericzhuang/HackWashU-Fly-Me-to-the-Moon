@@ -107,7 +107,7 @@ to relight the page, R to replay, M to mute, F for fullscreen.
 Other entry points: `python -m terminator.reveal <folder>` (combine any four photos),
 `python -m terminator.relight <folder>` (virtual-sun relight), `python tools/import_photos.py`
 (four hand-taken photos), `python -m terminator.phone --redo out/scan_...` (re-run a past scan).
-`CLAUDE.md` has the full file contract between the Python side and the web UI.
+[docs/scan-contract.md](docs/scan-contract.md) has the full file contract between the Python side and the web UI.
 
 Tests: `cd web && npm test` (web UI) and the simulated scan in `.github/workflows/ci.yml`
 (processing), both run on every push.

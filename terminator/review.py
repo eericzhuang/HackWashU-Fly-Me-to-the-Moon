@@ -7,7 +7,7 @@
          (Shift = 10 px), Enter accepts. The answer comes back as out/latest/review_answer.json.
   nobody After --review-timeout seconds the pipeline's own pick (option 0) is used.
 
-While a review is open, meta.json carries a "review" object (see CLAUDE.md, interface contract)
+While a review is open, meta.json carries a "review" object (see docs/scan-contract.md)
 and the scan folder holds review_ref.png + review_<i>.png (published to out/latest).
 """
 from __future__ import annotations

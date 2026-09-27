@@ -19,3 +19,6 @@ web/.env.local
 *.mov
 *.mp4
 TERMINATOR DEMO script.md
+
+# assistant notes (local only)
+CLAUDE.md

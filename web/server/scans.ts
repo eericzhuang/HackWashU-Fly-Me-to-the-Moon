@@ -4,7 +4,7 @@ import { join } from "node:path";
 /** Scan folders the UI may read: the live mirror, the committed simulation, and past scans. */
 export const SCAN_NAME = /^(latest|sim|scan_\d{8}_\d{6})$/;
 
-/** The only files the UI may read from a scan folder (the interface contract in CLAUDE.md). */
+/** The only files the UI may read from a scan folder (docs/scan-contract.md). */
 export const SCAN_FILES = new Set([
   "meta.json",
   "dark.png",
