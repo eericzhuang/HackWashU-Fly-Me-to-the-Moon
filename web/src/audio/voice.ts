@@ -24,13 +24,19 @@ export class SilentVoice implements Voice {
   }
 }
 
-/** L0 voice: the browser's own speech synthesis (the radio effect comes with Cloud TTS in L1).
- *  Word timing comes from boundary events when the voice sends them, otherwise it is estimated. */
+/** Browser speech stays outside Web Audio. Word timing comes from boundary events when
+ *  the voice sends them, otherwise it is estimated. */
 export class BrowserVoice implements Voice {
-  muted = false;
+  private isMuted = false;
   private finish: (() => void) | null = null;
   // Chrome can garbage-collect an utterance nothing references, and then never fire onend.
   private utterance: SpeechSynthesisUtterance | null = null;
+
+  get muted(): boolean { return this.isMuted; }
+  set muted(on: boolean) {
+    this.isMuted = on;
+    if (on && this.finish) this.cancel();
+  }
 
   speak(words: string[], onWord: (i: number) => void): Promise<void> {
     return this.say(words, onWord);
@@ -59,26 +65,36 @@ export class BrowserVoice implements Voice {
       u.rate = 0.95;
       u.volume = this.muted ? 0 : 1;
       let last = -1;
+      let finished = false;
       let estimate: ReturnType<typeof setInterval> | undefined;
+      let fallback: ReturnType<typeof setTimeout> | undefined;
       const reach = (i: number) => {
-        if (i > last && i < words.length) {
+        if (!finished && i > last && i < words.length) {
           last = i;
           onWord(i);
         }
       };
       const done = () => {
+        if (finished) return;
+        finished = true;
         clearInterval(estimate);
+        clearTimeout(fallback);
+        u.onstart = null;
+        u.onboundary = null;
+        u.onend = null;
+        u.onerror = null;
         if (this.finish === done) this.finish = null;
         if (this.utterance === u) this.utterance = null;
         resolve();
       };
       u.onstart = () => {
+        if (finished) return;
         reach(0);
         // Some voices send no word boundaries: step at a speaking pace until one arrives.
         estimate = setInterval(() => reach(last + 1), WORD_MS);
       };
       u.onboundary = (e) => {
-        if (e.name !== "word") return;
+        if (finished || e.name !== "word") return;
         clearInterval(estimate);
         let i = 0;
         while (i + 1 < starts.length && starts[i + 1] <= e.charIndex) i++;
@@ -90,9 +106,11 @@ export class BrowserVoice implements Voice {
       this.utterance = u;
       speechSynthesis.speak(u);
       // Without a user gesture Chrome drops speech silently; never hang the show on it.
-      setTimeout(() => {
-        if (last < 0 && !speechSynthesis.speaking) done();
-      }, 1500);
+      if (!finished) {
+        fallback = setTimeout(() => {
+          if (last < 0 && !speechSynthesis.speaking) done();
+        }, 1500);
+      }
     });
   }
 }

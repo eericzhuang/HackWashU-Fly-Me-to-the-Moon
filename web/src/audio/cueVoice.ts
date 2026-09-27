@@ -13,6 +13,7 @@ export class CueVoice implements Voice {
 
   get muted(): boolean { return this.browser.muted; }
   set muted(on: boolean) {
+    if (on && this.current) this.cancel();
     this.browser.muted = on;
     this.tones.muted = on;
   }
