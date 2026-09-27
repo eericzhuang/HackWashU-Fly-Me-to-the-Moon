@@ -40,6 +40,8 @@ landscape at the terminator. So we took the prompt fairly literally:
    the shutter (Night mode). The photo is pulled straight off the phone over USB
    (`pymobiledevice3`), cropped, and shown in the web UI as it lands.
    Each light only shows the strokes that cross its direction, which is why there are four.
+
+   ![Capture in the web UI: each photo lands next to a Moon lit from the same side](docs/img/ui_capture.jpg)
 3. **Align.** Tapping the shutter nudges the phone, so the four photos don't line up. We register
    them on the paper edge and the ruled lines, reject fits that aren't physically plausible, and
    cross-check every pair of photos against each other (loop closure), which catches a photo that
