@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # the processing side only; pymobiledevice3 (phone capture) is left out
+      - run: pip install opencv-python-headless numpy pillow pyserial
+      - name: Simulated scan -> reveal -> relight
+        run: |
+          python tools/simulate.py "Meet me on the moon at 9" --out /tmp/sim
+          python -m terminator.reveal /tmp/sim --method depth
+          python -m terminator.reveal /tmp/sim --method range
+          python -m terminator.relight /tmp/sim
+          python -c "import terminator.align, terminator.stages, terminator.review"

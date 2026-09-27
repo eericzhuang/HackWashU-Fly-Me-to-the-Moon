@@ -8,7 +8,7 @@
 
 **Tech Stack:** three 0.186.1, postprocessing 6.39.5, gsap 3.15.0, lil-gui 0.21.0, @fontsource/jost 5.3.0, @fontsource/jetbrains-mono 5.3.0, @types/three 0.186.0 (plus the L0 stack: Vite 8, TypeScript 7, Vitest 5).
 
-**Spec:** `docs/superpowers/specs/2026-09-26-web-ui-design.md` §3–§4. Order change (user, 2026-09-26): visuals first. This plan = the spec's L1 visuals + L2's "hold the sun"; sound/Cloud TTS and the paper-terrain descent come in later plans. Both risky shaders (moon, relight) were proven in a scratchpad spike first; the code below is the spike's.
+**Spec:** `docs/dev/web-ui/specs/2026-09-26-web-ui-design.md` §3–§4. Order change (user, 2026-09-26): visuals first. This plan = the spec's L1 visuals + L2's "hold the sun"; sound/Cloud TTS and the paper-terrain descent come in later plans. Both risky shaders (moon, relight) were proven in a scratchpad spike first; the code below is the spike's.
 
 ## Global Constraints
 
@@ -2374,7 +2374,7 @@ git commit -m "Tuning panel on D for rehearsals"
 ### Task 9: Docs and final checks
 
 **Files:**
-- Modify: `CLAUDE.md`, `docs/superpowers/specs/2026-09-26-web-ui-design.md`
+- Modify: `CLAUDE.md`, `docs/dev/web-ui/specs/2026-09-26-web-ui-design.md`
 
 - [ ] **Step 1: CLAUDE.md**
 
@@ -2395,7 +2395,7 @@ In `## Status / next`, after the `Web UI L0` line, add:
 
 - [ ] **Step 2: Spec §8 note**
 
-In `docs/superpowers/specs/2026-09-26-web-ui-design.md`, directly under the `## 8. 分层交付` heading, add:
+In `docs/dev/web-ui/specs/2026-09-26-web-ui-design.md`, directly under the `## 8. 分层交付` heading, add:
 ```markdown
 > 2026-09-26 调整顺序（用户决定）：先做画面。L1 = 3D 月球、星空、照片卡片、降落与日出、握住太阳（原 L2 的重打光）。声音和 Cloud TTS 挪到下一层，纸面地形降落放在最后。
 ```
@@ -2405,7 +2405,7 @@ In `docs/superpowers/specs/2026-09-26-web-ui-design.md`, directly under the `## 
 Run (in `web/`): `npm run typecheck && npm test && npm run build` → all pass.
 Run (repo root): `git status --short` → only the two doc files modified (plus the untracked `.claude/`, which is not committed).
 ```bash
-git add CLAUDE.md docs/superpowers/specs/2026-09-26-web-ui-design.md
+git add CLAUDE.md docs/dev/web-ui/specs/2026-09-26-web-ui-design.md
 git commit -m "Document the 3D stage and the new layer order"
 ```
 

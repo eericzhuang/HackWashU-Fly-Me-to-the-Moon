@@ -1,5 +1,7 @@
 # Terminator
 
+[![CI](https://github.com/eericzhuang/HackWashU-Fly-Me-to-the-Moon/actions/workflows/ci.yml/badge.svg)](https://github.com/eericzhuang/HackWashU-Fly-Me-to-the-Moon/actions/workflows/ci.yml)
+
 **Reading the invisible writing a pen leaves behind, the way astronomers read the Moon.**
 HackWashU 2026 · theme: *Fly Me to the Moon*
 
@@ -107,6 +109,9 @@ Other entry points: `python -m terminator.reveal <folder>` (combine any four pho
 (four hand-taken photos), `python -m terminator.phone --redo out/scan_...` (re-run a past scan).
 `CLAUDE.md` has the full file contract between the Python side and the web UI.
 
+Tests: `cd web && npm test` (web UI) and the simulated scan in `.github/workflows/ci.yml`
+(processing), both run on every push.
+
 ## Repo layout
 
 ```
@@ -116,6 +121,7 @@ terminator/     capture (phone.py, scan.py), alignment (align.py, review.py),
 tools/          simulator, photo import, step-by-step explainer
 web/            the show: Vite + TypeScript + three.js, Google Vision proxy, local audio
 out/sim/        a synthetic scan for trying the UI without hardware
+docs/dev/       build notes: web UI spec, implementation plans, checklist
 ```
 
 The two halves only talk through a scan folder: Python writes `out/latest/` (photos, `meta.json`,

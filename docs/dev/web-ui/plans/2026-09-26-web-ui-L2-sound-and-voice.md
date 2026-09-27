@@ -8,7 +8,7 @@
 
 **Tech Stack:** Vite 8, TypeScript 7, Vitest 5, Tone.js 15.1.22, browser Web Speech and Web Audio APIs.
 
-**Spec:** `docs/superpowers/specs/2026-09-26-web-ui-design.md` §§3 and 6–9, with the §8 order note. **User revision, 2026-09-26:** no TTS API; use existing browser speech plus local Tone.js music and Quindar. This supersedes `/api/speak`, Cloud TTS cache, the MP3 alarm asset, radio filtering and SSML timepoints for this layer. Browser speech cannot be routed through our Web Audio filter; timing uses `onboundary` when available, then estimates. Paper-terrain descent remains a later layer.
+**Spec:** `docs/dev/web-ui/specs/2026-09-26-web-ui-design.md` §§3 and 6–9, with the §8 order note. **User revision, 2026-09-26:** no TTS API; use existing browser speech plus local Tone.js music and Quindar. This supersedes `/api/speak`, Cloud TTS cache, the MP3 alarm asset, radio filtering and SSML timepoints for this layer. Browser speech cannot be routed through our Web Audio filter; timing uses `onboundary` when available, then estimates. Paper-terrain descent remains a later layer.
 
 ## Global Constraints
 
@@ -113,7 +113,7 @@
 
 ## Task 3: Connect stages and document
 
-**Files:** Create `web/src/audio/controls.ts`, `web/test/audio/controls.test.ts`; modify `web/src/main.ts`, `web/src/scene/threeStage.ts`, `web/src/scene/sunHandle.ts`, `web/test/show/director.test.ts`, `CLAUDE.md`, `docs/TODO-web-ui.md`.
+**Files:** Create `web/src/audio/controls.ts`, `web/test/audio/controls.test.ts`; modify `web/src/main.ts`, `web/src/scene/threeStage.ts`, `web/src/scene/sunHandle.ts`, `web/test/show/director.test.ts`, `CLAUDE.md`, `docs/dev/web-ui/TODO.md`.
 
 **Interfaces:** `ThreeStage.create(glRoot,domRoot,onHeldSun?)`; callback receives azimuth/elevation radians only during hold. `SunHandle.angles()` returns `{azimuth,elevation}` from follower. DOM stage has no sun callback.
 
@@ -128,7 +128,7 @@
   ```
 
 - [ ] **Step 3: Browser verification.** Replay `?replay=sim&pace=2500` in 3D and `?stage=dom`: first gesture, M on/off, each LED, combining, reveal word/subtitle highlighting, hold sun pan/filter, R, Esc, second scan, and existing OCR 1202 failure. Confirm no Google speech request, other runtime external asset or WebGL error. Check loop stops. Record that local voice quality/boundary timing depend on browser. Run `npm run typecheck && npm test && npm run build`.
-- [ ] **Step 4: Docs and commit.** `CLAUDE.md`: local sound, gesture and M, browser voice limitation, demo commands. `docs/TODO-web-ui.md`: mark sound done after review, remove Cloud TTS enablement, leave speaker/hardware rehearsal open. Stage only owned files; commit `Connect local sound to the web show`.
+- [ ] **Step 4: Docs and commit.** `CLAUDE.md`: local sound, gesture and M, browser voice limitation, demo commands. `docs/dev/web-ui/TODO.md`: mark sound done after review, remove Cloud TTS enablement, leave speaker/hardware rehearsal open. Stage only owned files; commit `Connect local sound to the web show`.
 
 ## Reference
 

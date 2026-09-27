@@ -1,8 +1,8 @@
 # Web UI: status and what's left
 
 Branch `ui`. Last updated 2026-09-26.
-Spec: `docs/superpowers/specs/2026-09-26-web-ui-design.md`
-Plans: `docs/superpowers/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/superpowers/plans/2026-09-26-web-ui-L1-light-and-3d.md`, `docs/superpowers/plans/2026-09-26-web-ui-L2-sound-and-voice.md` (local sound)
+Spec: `docs/dev/web-ui/specs/2026-09-26-web-ui-design.md`
+Plans: `docs/dev/web-ui/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/dev/web-ui/plans/2026-09-26-web-ui-L1-light-and-3d.md`, `docs/dev/web-ui/plans/2026-09-26-web-ui-L2-sound-and-voice.md` (local sound)
 
 ## Done
 - **L0 skeleton (all 10 tasks, final review passed):**

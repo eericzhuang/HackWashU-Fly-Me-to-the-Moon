@@ -8,7 +8,7 @@
 
 **Tech Stack:** Vite 8.3.1, TypeScript 7.0.2, Vitest 5.0.2, @types/node 26.6.3. No runtime dependencies in L0.
 
-**Spec:** `docs/superpowers/specs/2026-09-26-web-ui-design.md`. This plan covers layer **L0** only. L1 (moon + sound), L2 (descent + hold the sun) and L3 (easter eggs) get their own plans once L0 exists.
+**Spec:** `docs/dev/web-ui/specs/2026-09-26-web-ui-design.md`. This plan covers layer **L0** only. L1 (moon + sound), L2 (descent + hold the sun) and L3 (easter eggs) get their own plans once L0 exists.
 
 ## Global Constraints
 
