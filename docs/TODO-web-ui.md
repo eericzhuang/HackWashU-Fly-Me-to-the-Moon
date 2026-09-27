@@ -38,6 +38,8 @@ Plans: `docs/superpowers/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/superpow
 - [ ] Full real scan on the Mac: frame rate, M (mute) and F (fullscreen) keys
 - [ ] Check score, Quindar and browser voice on the demo Mac speakers; set levels below hardware instructions
 - [ ] Check browser voice quality and word boundary timing in the demo browser
+- [ ] Force an OCR failure in the demo browser and confirm the 1202 path with local tones and speech
+- [ ] Inspect browser requests during replay to confirm sound adds no external audio or TTS request
 - [ ] Screen-brightness A/B test (screen black vs UI on during capture); tune `STAGE.captureDim` (0.45)
 - [ ] Real OCR time on a real scan's reveal.png vs the 8 s deadline
 - [ ] Check the relit page with a real color phone scan, especially green and blue LED shots
@@ -49,3 +51,5 @@ Plans: `docs/superpowers/plans/2026-09-26-web-ui-L0-skeleton.md`, `docs/superpow
 - `cache.ts`: the temp file name isn't unique, so two windows reading the same new scan at once could collide.
 - `scanFeed`, `voice`, `domStage`: small items listed in `.superpowers/sdd/progress.md` (local only).
 - If 3D assets fail during startup, the CSS stage appears but the started WebGL render loop continues in the background; defer cleanup.
+- Held-sun pan follows vertical pointer movement because the approved L2 plan uses `sin(azimuth)`; tune the mapping after speaker rehearsal.
+- A held-sun pan position carries into the next scan until the sun moves again; recenter it if the demo reveals an audible imbalance.
